@@ -121,7 +121,7 @@ impl Morrowseal {
             last_checkin_ns: now(), checkins: 0, status: Status::Active, released_ns: None, notice_ct: None,
             claims: vec![None; heirs as usize], pending: false, mailed: false };
         self.vaults.insert(id, v);
-        self.event("vault_created", id, format!("{heirs} heir(s), check in every {interval_s}s"));
+        self.event("vault_created", id, format!("{heirs} {}, check in every {interval_s}s", if heirs == 1 { "heir" } else { "heirs" }));
         id
     }
 
@@ -148,7 +148,7 @@ impl Morrowseal {
         v.heirs = heirs;
         v.claims = vec![None; heirs as usize];
         v.last_checkin_ns = now();
-        self.event("vault_updated", vault_id, format!("{heirs} heir(s)"));
+        self.event("vault_updated", vault_id, format!("{heirs} {}", if heirs == 1 { "heir" } else { "heirs" }));
     }
 
     pub fn set_schedule(&mut self, vault_id: u64, interval_s: u64, grace_s: u64) {
@@ -273,8 +273,8 @@ impl Morrowseal {
         let v = self.vaults.get_mut(&vault_id).expect("no vault");
         require!(v.notice_ct.is_some(), "not notified yet");
         v.mailed = mailed;
-        let n = v.heirs;
-        if mailed { self.event("heir_email_sent", vault_id, format!("{n} heir(s)")); }
+        let n = v.claims.iter().filter(|c| c.is_none()).count();
+        if mailed { self.event("heir_email_sent", vault_id, if n == 1 { "1 heir emailed".to_string() } else { format!("{n} heirs emailed") }); }
     }
 
     // ---------- views ----------

@@ -131,7 +131,7 @@ export default function Create() {
                 <div><span>Files</span><b>{files.length ? files.map((f) => f.name).join(", ") : "Message only"}</b></div>
                 <div><span>Heirs</span><b>{heirs.map((h) => h.name).join(", ")}</b></div>
                 <div><span>Releases after</span><b>{span(interval + grace)} of silence</b></div>
-                <div><span>Stored on NEAR</span><b>hash · IPFS address · {heirs.length} heir(s) · times</b></div>
+                <div><span>Stored on NEAR</span><b>hash · IPFS address · {heirs.length} {heirs.length === 1 ? 'heir' : 'heirs'} · times</b></div>
               </div>
               {phase >= 0 && <div className="progress-list">{["Reading files", "Encrypting and sealing to the enclave", "Recording the commitment on NEAR", "Done"].map((t, i) => <div key={t} className={i < phase ? "ok" : i === phase ? "on" : ""}>{i < phase ? <CheckCircle size={18} weight="fill" /> : i === phase ? <CircleNotch size={18} className="spin" /> : <span style={{ width: 18 }} />}{t}</div>)}</div>}
             </>)}

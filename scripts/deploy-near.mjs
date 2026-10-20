@@ -1,6 +1,6 @@
 // Deploy (or upgrade) the vault contract. Keys come from the env file (never committed).
 import fs from "node:fs";
-import { account, call, view } from "./near.mjs";
+import { account, call, view } from "../keeper/chain.mjs";
 const id = process.env.NEAR_CONTRACT_ID;
 const a = await account(id, process.env.NEAR_CONTRACT_KEY);
 const wasm = fs.readFileSync(new URL("../contracts/vault/target/near/morrowseal_vault.wasm", import.meta.url));
