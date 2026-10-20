@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
-import { tick, relayClaim, relayReopen } from "./lib.mjs";
-import { fund, privyUser, privyEmails } from "./fund.mjs";
+import { tick, relayClaim, relayReopen, relayOwnerOpen } from "./lib.mjs";
+import { fund, privyUser, privyEmails, privyNearAccounts } from "./fund.mjs";
 import { indexNamed, indexNotice, sharedWith, claimLink, record, keeperEvents } from "./heirs.mjs";
 import { fresh, ownerIds } from "./index-cache.mjs";
 import { namedEmail, sendMail } from "./email.mjs";
@@ -148,6 +148,20 @@ http.createServer(async (req, res) => {
       const n = out.filter((x) => x === "sent").length;
       if (n) record("heirs_named", j.vault_id, n === 1 ? "1 heir told they were named" : `${n} heirs told they were named`);
       return json(res, 200, { results: out });
+    }
+    if (url.pathname === "/api/owner-open" && req.method === "POST") {
+      // Keeper pays. Only the vault owner may ask; the enclave also checks the sealed owner email.
+      const me = await privyNearAccounts((req.headers.authorization || "").replace(/^Bearer /, ""));
+      if (!me) return json(res, 401, { error: "Please sign in again." });
+      const sub = me.sub;
+      const j = JSON.parse((await body(req, 64 * 1024)).toString());
+      if (!Number.isInteger(j.vault_id) || !/^[0-9a-f]+$/i.test(j.request_hex || "")) return json(res, 400, { error: "bad request" });
+      const st = await fresh(); const v = st.vaults.get(j.vault_id);
+      if (!v || !me.accounts.includes(v.owner)) return json(res, 403, { error: "Only the owner can preview this vault." });
+      if (limited(req, 10, "owner-open", sub)) return json(res, 429, { error: "Too many attempts, wait a minute." });
+      const r = await relayOwnerOpen(ops, j);
+      if (!r) return json(res, 409, { error: "Already opening, one moment." });
+      return json(res, r.ok ? 200 : 422, r);
     }
     if (url.pathname === "/api/reopen" && req.method === "POST") {
       // Verify first; only verified requests count toward the limit, keyed on the Privy user.

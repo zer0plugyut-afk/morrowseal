@@ -89,3 +89,17 @@ export async function relayReopen(ops, { vault_id, heir_index, request_hex }) {
   return { tx: o.transaction.hash, ok: r?.ok === true, key_ct: r?.key_ct || null, error: r?.error || null };
   });
 }
+
+/** Relay an owner preview so owners never pay. The enclave checks the sealed Privy token against the sealed owner email. */
+export async function relayOwnerOpen(ops, { vault_id, request_hex }) {
+  return once(`p${vault_id}:${request_hex.slice(0, 16)}`, async () => {
+    const v = await view(VAULT_CONTRACT, "get_vault", { vault_id });
+    if (!v) throw new Error("Vault not found.");
+    if (v.status === "Cancelled") throw new Error("This vault was cancelled.");
+    const ct = await fetchCid(v.cid);
+    const o = await call(ops, VAULT_CONTRACT, "owner_open", { vault_id, ciphertext_hex: toHex(ct), request_hex }, { deposit: TEE_DEPOSIT });
+    const r = lastValue(o);
+    log("owner_open", vault_id, o.transaction.hash, r?.ok);
+    return { tx: o.transaction.hash, ok: r?.ok === true, key_ct: r?.key_ct || null, error: r?.error || null };
+  });
+}

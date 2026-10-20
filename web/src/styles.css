@@ -394,3 +394,8 @@ dd .heir-chips { justify-content: flex-start; }
   .seg { display: flex; } .seg button { flex: 1 1 auto; padding: 8px 12px; }
   .review > div { flex-wrap: wrap; } .review > div b { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 }
+/* Pager: theme tokens so it reads in light and dark */
+.pager .mu-pagination { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border); border-radius: 99px; }
+.pager .mu-pagination button, .pager .mu-pagination a, .pager .mu-pagination span { color: var(--text) !important; background: transparent !important; }
+.pager .mu-pagination [aria-current="page"], .pager .mu-pagination [aria-current="true"], .pager .mu-pagination [data-selected], .pager .mu-pagination [data-active="true"] { background: var(--text) !important; color: var(--bg) !important; border-radius: 99px; }
+.pager .mu-pagination button:disabled { opacity: .4; }

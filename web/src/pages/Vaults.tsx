@@ -112,6 +112,16 @@ export function VaultDetail() {
 
 export const label = (k: string) => ({ vault_created: "Vault sealed", checked_in: "Checked in", vault_updated: "Contents replaced", schedule_changed: "Schedule changed", vault_cancelled: "Cancelled", vault_released: "Deadline missed", heirs_notified: "Heirs notified", heir_email_sent: "Heirs emailed", heir_claimed: "Claimed" } as Record<string, string>)[k] || k;
 
+function friendly(e: any): string {
+  const m = String(e?.message || e).replace(/^Error: /, "");
+  if (/not the owner's email/i.test(m)) return "You're signed in with a different email than the one that sealed this vault.";
+  if (/sealed before this update|unavailable/i.test(m)) return "Preview isn't available for this older vault.";
+  if (/expired|sign in again/i.test(m)) return "Your sign-in expired. Sign in again and retry.";
+  if (/too many/i.test(m)) return "Too many tries. Wait a minute and try again.";
+  if (/NotEnoughBalance|balance/i.test(m)) return "The network fee couldn't be paid right now. Try again shortly.";
+  if (/^[\[{]/.test(m.trim()) || m.length > 160) return "The enclave couldn't open it right now. Try again in a moment.";
+  return m;
+}
 /** Owner preview: the enclave checks your sign-in email against the one sealed inside, then re-seals the key to this browser only. */
 function OwnerOpen({ v }: { v: any }) {
   const [st, setSt] = useState<"idle" | "busy" | "done">("idle");
@@ -122,15 +132,14 @@ function OwnerOpen({ v }: { v: any }) {
   const go = async () => {
     setSt("busy"); setErr("");
     try {
-      const ct = await fetchCid(v.cid);
-      const ctHex = Array.from(ct, (b) => b.toString(16).padStart(2, "0")).join("");
       const tok = await identityToken();
-      if (!tok) throw new Error("Sign in again to open this vault");
+      if (!tok) throw new Error("Sign in again to open this vault.");
       const req = buildOwnerOpen({ idToken: tok });
-      const r = await callVault("owner_open", { vault_id: v.id, ciphertext_hex: ctHex, request_hex: req.requestHex }, { tgas: 300, deposit: "20000000000000000000000" });
-      if (!r.value?.ok) throw new Error(r.value?.error || "The enclave did not answer");
-      setGift(await openGift(req.ephSk, r.value.key_ct, fetchCid)); setSt("done");
-    } catch (e: any) { setErr(String(e?.message || e).slice(0, 160)); setSt("idle"); }
+      const r = await fetch("/api/owner-open", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${tok}` }, body: JSON.stringify({ vault_id: v.id, account: v.owner, request_hex: req.requestHex }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok || !j.key_ct) throw new Error(j.error || "The enclave did not answer.");
+      setGift(await openGift(req.ephSk, j.key_ct, fetchCid)); setSt("done");
+    } catch (e: any) { setErr(friendly(e)); setSt("idle"); }
   };
   if (st === "done" && gift) return (
     <div className="owner-preview">
@@ -138,5 +147,5 @@ function OwnerOpen({ v }: { v: any }) {
       {gift.files.map((f: any, i: number) => <div key={i}><a className="link ellipsis" download={f.name} href={URL.createObjectURL(new Blob([f.bytes], { type: f.type }))}>{f.name}</a></div>)}
       <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>Decrypted in this browser only.</p>
     </div>);
-  return <span><button className="btn btn-sm" disabled={st === "busy"} onClick={go}>{st === "busy" ? "Opening…" : "Open vault"}</button>{err && <div style={{ color: "var(--danger)", fontSize: 13, marginTop: 6 }}>{err}</div>}<div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Costs about 0.02 NEAR for the enclave.</div></span>;
+  return <span><button className="btn btn-sm" disabled={st === "busy"} onClick={go}>{st === "busy" ? "Opening…" : "Open vault"}</button>{err && <div style={{ color: "var(--danger)", fontSize: 13, marginTop: 6 }}>{err}</div>}<div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Free. The keeper pays the enclave fee.</div></span>;
 }
