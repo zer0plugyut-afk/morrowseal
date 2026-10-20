@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { connectedAccount, signIn, signOut, view, type Vault } from "../lib/near";
+import { view, type Vault } from "../lib/near";
+import { currentUser, onAuthChange, signIn, signOut } from "../lib/privy";
 import { localVaults } from "../lib/local";
 import type { ShelfVault } from "../components/VaultShelf";
 
-type Ctx = { watch: boolean; account: string | null; ready: boolean; vaults: ShelfVault[]; refresh: () => Promise<void>; login: () => Promise<void>; logout: () => Promise<void>; loading: boolean };
+type Ctx = { watch: boolean; account: string | null; ready: boolean; vaults: ShelfVault[]; refresh: () => Promise<void>; login: () => Promise<void>; logout: () => Promise<void>; loading: boolean; email: string | null };
 const C = createContext<Ctx>(null as any);
 export const useApp = () => useContext(C);
 
@@ -12,6 +13,7 @@ export function AppState({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [vaults, setVaults] = useState<ShelfVault[]>([]);
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!account) { setVaults([]); return; }
@@ -27,11 +29,12 @@ export function AppState({ children }: { children: ReactNode }) {
   useEffect(() => {
     const w = new URLSearchParams(location.search).get("watch") || sessionStorage.getItem("ms-watch");
     if (w && /^[a-z0-9._-]{2,64}$/.test(w)) { sessionStorage.setItem("ms-watch", w); setAccount(w); setWatch(true); setReady(true); return; }
-    connectedAccount().then((a) => { setAccount(a); setReady(true); });
+    const sync = () => currentUser().then((u) => { setAccount(u?.account ?? null); setEmail(u?.email ?? null); setReady(true); });
+    sync(); return onAuthChange(() => { if (!sessionStorage.getItem("ms-watch")) sync(); });
   }, []);
   useEffect(() => { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); }, [refresh]);
 
-  const login = async () => { const a = await signIn(); setAccount(a); };
-  const logout = async () => { sessionStorage.removeItem("ms-watch"); setWatch(false); await signOut(); setAccount(null); };
-  return <C.Provider value={{ watch, account, ready, vaults, refresh, login, logout, loading }}>{children}</C.Provider>;
+  const login = async () => { const u = await signIn(); setAccount(u.account); setEmail(u.email); };
+  const logout = async () => { sessionStorage.removeItem("ms-watch"); setWatch(false); await signOut(); setAccount(null); setEmail(null); };
+  return <C.Provider value={{ watch, account, ready, vaults, refresh, login, logout, loading, email }}>{children}</C.Provider>;
 }

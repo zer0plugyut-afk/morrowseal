@@ -11,7 +11,7 @@ const FAQ = [
   ["What if I'm just busy and miss a check-in?", "You choose the rhythm (weekly to yearly) and a grace period on top. You can check in from any device with one tap, and nothing happens until both have passed."],
   ["Who can read my files?", "Nobody but your heirs, after release. Files are encrypted in your browser before they leave it. The key is sealed to a secure enclave (an Intel TDX worker run by OutLayer) that only hands it to a named heir once the vault is released on NEAR."],
   ["What does the blockchain see?", "A hash of the sealed vault, an IPFS address of ciphertext, how many heirs there are, and your check-in times. Never names, emails, file names or contents. Open the Proof page to see exactly what is stored."],
-  ["How does an heir prove it's them?", "They get a private link by email and sign in with that same email through NEAR Auth. The enclave checks the link and the signed-in email before it releases anything. No seed phrase, no wallet needed."],
+  ["How does an heir prove it's them?", "They get a private link by email and sign in with that same email using a one-time code. The enclave checks the link and the signed-in email before it releases anything. No seed phrase, no wallet needed."],
   ["Can I change my mind?", "Yes. While you're checking in you can replace files, change heirs or cancel the vault. Any update also counts as a check-in."],
   ["Is this live on mainnet?", "Not yet. Morrowseal runs on NEAR testnet today, so use it to try the flow, not for real documents."],
 ];
@@ -87,7 +87,7 @@ export default function Landing() {
               [Hash, "Only hashes on NEAR", "The contract stores a SHA-256 commitment, an IPFS address of ciphertext, a heir count and your check-in times. That's all."],
               [Cpu, "The key never leaves the enclave", "Your vault key is sealed to an OutLayer worker running in Intel TDX. Its own key was generated inside the TEE; nobody has seen it."],
               [EyeSlash, "Heirs stay hidden", "Names and emails are inside the sealed vault. They only surface, encrypted to the mail keeper, after release."],
-              [Fingerprint, "Email sign-in, no seed phrase", "Heirs sign in with NEAR Auth. The enclave checks the signed-in email against the one you named."],
+              [Fingerprint, "Email sign-in, no seed phrase", "Heirs sign in with a one-time email code. The enclave checks the signed-in email against the one you named."],
               [Heartbeat, "Re-checked on chain", "Every release request makes the enclave re-read the vault from NEAR, so a forged request can't open a live vault."],
               [FolderLock, "Files on IPFS, sealed", "AES-256-GCM in your browser before upload. IPFS only ever holds ciphertext."],
             ].map(([I, t, d]: any, i) => (
@@ -105,7 +105,7 @@ export default function Landing() {
             <p className="lead">No crypto jargon, no wallet to install. Heirs sign in with the email you used for them, and their browser decrypts everything on the spot.</p>
             <ul className="ticks">
               <li><CheckCircle size={20} weight="fill" /> A private link that only works for them</li>
-              <li><CheckCircle size={20} weight="fill" /> Sign in with email through NEAR Auth, or a NEAR wallet</li>
+              <li><CheckCircle size={20} weight="fill" /> Owners and heirs sign in with email; the NEAR account is made for you</li>
               <li><CheckCircle size={20} weight="fill" /> Files decrypt in their browser, never on a server</li>
             </ul>
           </Rise>

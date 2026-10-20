@@ -51,7 +51,7 @@ export function VaultDetail() {
   const v = vaults.find((x) => x.id === vid);
   const local = localVaults()[vid];
   useEffect(() => { view<ChainEvent[]>("list_events", { from: 0, limit: 100 }).then((e) => setEvents(e.filter((x) => x.vault_id === vid).reverse())).catch(() => {}); }, [vid, v?.checkins, v?.status]);
-  if (!account) return <NeedWallet what="Connect the wallet that owns this vault." />;
+  if (!account) return <NeedWallet what="Sign in with the email that owns this vault." />;
   if (!v) return <div className="card empty"><h3>Loading vault…</h3></div>;
   const left = deadline(v) - now;
   const act = (method: string, label: string) => toast.promise(callVault(method, { vault_id: v.id }, { tgas: 20 }).then((r) => { refresh(); return r; }), { loading: { title: label }, success: { title: method === "cancel" ? "Vault cancelled" : "You're checked in", tone: "success" }, error: (e: any) => ({ title: "That didn't go through", sub: String(e?.message || e).slice(0, 80), tone: "error" }) });

@@ -4,7 +4,7 @@
 //!   pubkey : the enclave's ECIES public key (secp256k1). Browsers seal vaults to it.
 //!   notify : after the vault is Released on NEAR, return heir names, emails and one-time claim
 //!            tokens, sealed to the keeper's mail key (KEEPER_PUB). Nothing readable goes on chain.
-//!   claim  : an heir proves their claim token (and, if they signed in with NEAR Auth, their email
+//!   claim  : an heir proves their claim token (and, if they signed in with email via Privy, their email
 //!            via the Auth0 ID token); the enclave re-seals the file key to the heir's browser key.
 //!
 //! Every action re-reads the vault from NEAR RPC, so a forged input cannot release a live vault.

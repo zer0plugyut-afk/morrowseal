@@ -6,5 +6,6 @@ import "@unlocalhosted/metalui/styles.css";
 import "./tokens.css";
 import "./styles.css";
 import App from "./App";
+import { AuthRoot } from "./lib/privy";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);
+ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AuthRoot><App /></AuthRoot></React.StrictMode>);

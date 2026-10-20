@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, SignOut, Wallet } from "@phosphor-icons/react";
+import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, SignOut, EnvelopeSimple } from "@phosphor-icons/react";
 import { Logo, ThemeToggle } from "../components/ui";
 import { useApp } from "./state";
 import { short } from "../lib/format";
@@ -15,7 +15,7 @@ export const NAV = [
 ];
 
 export default function Shell() {
-  const { account, login, logout, vaults, watch } = useApp();
+  const { account, login, logout, vaults, watch, email } = useApp();
   const loc = useLocation();
   const overdue = vaults.filter((v) => v.status === "Active").length;
   return (
@@ -30,9 +30,9 @@ export default function Shell() {
         <div className="side-foot">
           <div style={{ display: "flex", gap: 8 }}><ThemeToggle /></div>
           {account ? (
-            <div className="acct"><span className="dot" /><div style={{ minWidth: 0, flex: 1 }}><div className="muted" style={{ fontSize: 11 }}>{watch ? "Viewing read-only" : "Signed in · testnet"}</div><div className="who mono">{short(account, 14, 8)}</div></div><button className="icon-btn" style={{ width: 32, height: 32 }} onClick={logout} aria-label="Sign out"><SignOut size={16} /></button></div>
+            <div className="acct"><span className="dot" /><div style={{ minWidth: 0, flex: 1 }}><div className="muted" style={{ fontSize: 11 }}>{watch ? "Viewing read-only" : "Signed in · testnet"}</div><div className="who mono" title={account}>{email && !watch ? email : short(account, 14, 8)}</div></div><button className="icon-btn" style={{ width: 32, height: 32 }} onClick={logout} aria-label="Sign out"><SignOut size={16} /></button></div>
           ) : (
-            <button className="btn btn-dark btn-sm" onClick={login}><Wallet size={16} /> Connect wallet</button>
+            <button className="btn btn-dark btn-sm" onClick={login}><EnvelopeSimple size={16} /> Sign in</button>
           )}
         </div>
       </aside>
@@ -59,10 +59,10 @@ export function NeedWallet({ what }: { what: string }) {
   const { login } = useApp();
   return (
     <div className="card empty">
-      <span className="icon-chip" style={{ margin: "0 auto" }}><Wallet size={22} weight="duotone" /></span>
-      <h3>Connect a NEAR testnet wallet</h3>
-      <p>{what} Any NEAR wallet works (Meteor, HOT, MyNearWallet, Intear). New to NEAR? Create a free testnet account at testnet.mynearwallet.com.</p>
-      <button className="btn btn-dark" onClick={login}>Connect wallet</button>
+      <span className="icon-chip" style={{ margin: "0 auto" }}><EnvelopeSimple size={22} weight="duotone" /></span>
+      <h3>Sign in with your email</h3>
+      <p>{what} We send a one-time code. Your NEAR testnet account is created for you, no wallet or seed phrase.</p>
+      <button className="btn btn-dark" onClick={login}>Sign in with email</button>
     </div>
   );
 }

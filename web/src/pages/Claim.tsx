@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EnvelopeSimple, Wallet, DownloadSimple, FileText, CheckCircle, CircleNotch, ArrowSquareOut, LockKeyOpen, Info } from "@phosphor-icons/react";
+import { EnvelopeSimple, DownloadSimple, FileText, CheckCircle, CircleNotch, ArrowSquareOut, Info } from "@phosphor-icons/react";
 import { Folder, useToast } from "@unlocalhosted/metalui";
 import { Logo, ThemeToggle, Reveal } from "../components/ui";
 import { buildClaim, openGift } from "@shared/morrowseal.mjs";
 import { fetchCid, relayClaim } from "../lib/api";
-import { EXPLORER, view, signIn, type Vault } from "../lib/near";
-import { currentHeir, fastAuthAvailable, loginHeir } from "../lib/fastauth";
+import { EXPLORER, view, type Vault } from "../lib/near";
+import { authConfigured, currentUser, identityToken, signIn } from "../lib/privy";
 
 type Gift = { owner_name: string; heir_name: string; message: string; files: { name: string; type: string; size: number; bytes: Uint8Array }[] };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -26,27 +26,21 @@ export default function Claim() {
 
   useEffect(() => { view<Vault>("get_vault", { vault_id: vid }).then(setVault).catch(() => setErr("This vault could not be found.")); }, [vid]);
   useEffect(() => { (async () => { const saved = localStorage.getItem(slot); const v = vault; if (saved && v?.claims[hi]) { setPhase("open"); await open(JSON.parse(saved).sk, v.claims[hi]!.key_ct); } })(); }, [vault?.id]);
-  useEffect(() => { currentHeir().then((s) => s && setHeirEmail(s.email)); }, []);
+  useEffect(() => { currentUser().then((s) => s?.email && setHeirEmail(s.email)); }, []);
 
   async function open(sk: string, keyCt: string) {
     try { const g = await openGift(sk, keyCt, fetchCid); setGift(g); setPhase("done"); } catch (e: any) { setErr("Your browser could not open the files: " + (e?.message || e)); setPhase("idle"); }
   }
 
-  async function claim(mode: "email" | "wallet" | "link") {
+  async function claim() {
     setErr("");
     try {
-      let claimant = "link-holder", idToken: string | undefined;
-      if (mode === "email") {
-        setPhase("auth");
-        const s = (await currentHeir()) || (await loginHeir());
-        if (!s) throw new Error("Sign-in was cancelled.");
-        setHeirEmail(s.email); claimant = s.label; idToken = s.idToken;
-      } else if (mode === "wallet") {
-        setPhase("auth");
-        const a = await signIn();
-        if (!a) throw new Error("No wallet connected.");
-        claimant = a;
-      }
+      setPhase("auth");
+      const s = await signIn();
+      if (s.email) setHeirEmail(s.email);
+      const idToken = await identityToken();
+      if (!idToken) throw new Error("Sign-in did not finish. Try again.");
+      const claimant = s.account;
       setPhase("claim");
       const c = buildClaim({ token, claimant, idToken });
       localStorage.setItem(slot, JSON.stringify({ sk: c.ephSk }));
@@ -94,10 +88,7 @@ export default function Claim() {
             <div className="banner warn" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> This link is missing its private part. Open the button in your email again.</div>
           ) : (
             <div className="claim-actions">
-              {fastAuthAvailable() && <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => claim("email")}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} {heirEmail ? `Continue as ${heirEmail}` : "Continue with email"}</button>}
-              <div className="or">{fastAuthAvailable() ? "or" : "sign in"}</div>
-              <button className={`btn ${fastAuthAvailable() ? "btn-ghost" : "btn-dark btn-lg"}`} disabled={busy} onClick={() => claim("wallet")}><Wallet size={18} /> Use a NEAR wallet</button>
-              {!fastAuthAvailable() && <button className="btn btn-ghost" disabled={busy} onClick={() => claim("link")}><LockKeyOpen size={18} /> Open with this link only</button>}
+              {authConfigured() ? <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => claim()}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} {heirEmail ? `Continue as ${heirEmail}` : "Continue with email"}</button> : <p>Sign-in is being set up. Try again shortly.</p>}
               {phase === "claim" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> The enclave is checking your link…</p>}
               {phase === "open" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> Decrypting in your browser…</p>}
             </div>

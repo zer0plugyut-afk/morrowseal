@@ -82,7 +82,7 @@ NEAR features used: OutLayer TEE via yield/resume, NEAR Auth (FastAuth) email lo
 
 ```
 contracts/vault   NEAR contract: vaults, check-ins, release, TEE notify/claim callbacks, events, views
-enclave/          OutLayer WASI (wasm32-wasip2): pubkey / notify / claim, RS256 ID-token check, RPC re-read
+enclave/          OutLayer WASI (wasm32-wasip2): pubkey / notify / claim, ES256 Privy identity-token check, RPC re-read
 shared/           crypto shared by browser, keeper and scripts (AES-GCM, ECIES, vault/claim builders)
 keeper/           deadline watcher, heir mail (Brevo), IPFS pin/fetch API, claim relay, serves web/dist
 web/              Vite + React app: landing, owner workspace, heir claim

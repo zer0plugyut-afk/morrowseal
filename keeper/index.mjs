@@ -5,6 +5,7 @@ import path from "node:path";
 import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
 import { tick, relayClaim } from "./lib.mjs";
+import { fund } from "./fund.mjs";
 
 const PORT = Number(process.env.PORT || 8790);
 const HOST = process.env.PORT ? "0.0.0.0" : "127.0.0.1";
@@ -35,7 +36,7 @@ const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/htm
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   try {
-    if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET,POST" }); return res.end(); }
+    if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, authorization", "access-control-allow-methods": "GET,POST" }); return res.end(); }
     if (url.pathname === "/api/health") return json(res, 200, { ok: true, keeper: last, interval_ms: INTERVAL });
     if (url.pathname === "/api/ipfs" && req.method === "POST") {
       if (limited(req, 40)) return json(res, 429, { error: "slow down" });
@@ -44,6 +45,12 @@ http.createServer(async (req, res) => {
     }
     const m = url.pathname.match(/^\/api\/ipfs\/([a-zA-Z0-9]+)$/);
     if (m && req.method === "GET") { const b = await fetchCid(m[1]); res.writeHead(200, { "content-type": "application/octet-stream", "cache-control": "public, max-age=31536000, immutable", "access-control-allow-origin": "*" }); return res.end(b); }
+    if (url.pathname === "/api/fund" && req.method === "POST") {
+      if (limited(req, 5)) return json(res, 429, { error: "slow down" });
+      const j = JSON.parse((await body(req, 4096)).toString());
+      const { code, ...r } = await fund(ops, (req.headers.authorization || "").replace(/^Bearer /, ""), j.account);
+      return json(res, code, r);
+    }
     if (url.pathname === "/api/claim" && req.method === "POST") {
       if (limited(req, 6)) return json(res, 429, { error: "Too many attempts, wait a minute." });
       const j = JSON.parse((await body(req, 64 * 1024)).toString());

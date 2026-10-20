@@ -1,4 +1,3 @@
-import { NearConnector } from "@hot-labs/near-connect";
 import { VAULT_CONTRACT } from "@shared/morrowseal.mjs";
 
 export const RPC = "https://rpc.testnet.near.org";
@@ -22,33 +21,4 @@ export async function view<T = any>(method: string, args: object = {}, contract 
 export const nsToMs = (ns: number | string) => Number(BigInt(String(ns)) / 1_000_000n);
 export const deadline = (v: Vault) => nsToMs(v.last_checkin_ns) + (v.interval_s + v.grace_s) * 1000;
 
-let connector: NearConnector | null = null;
-export function nearConnector() {
-  if (!connector) connector = new NearConnector({ network: "testnet", features: { signAndSendTransaction: true, testnet: true }, footerBranding: null });
-  return connector;
-}
-
-export async function connectedAccount(): Promise<string | null> {
-  try { const { accounts } = await nearConnector().getConnectedWallet(); return accounts[0]?.accountId ?? null; } catch { return null; }
-}
-
-export async function signIn(): Promise<string | null> {
-  const c = nearConnector();
-  await c.connect();
-  return connectedAccount();
-}
-export async function signOut() { try { await nearConnector().disconnect(); } catch {} }
-
-export async function callVault(method: string, args: object, { tgas = 50, deposit = "0" } = {}) {
-  const { wallet, accounts } = await nearConnector().getConnectedWallet();
-  const out: any = await wallet.signAndSendTransaction({
-    network: "testnet", signerId: accounts[0].accountId, receiverId: VAULT_CONTRACT,
-    actions: [{ type: "FunctionCall", params: { methodName: method, args, gas: String(BigInt(tgas) * 10n ** 12n), deposit } } as any],
-  });
-  const hash: string = out?.transaction?.hash || out?.transaction_outcome?.id || "";
-  let value: any = null;
-  const sv = out?.status?.SuccessValue;
-  if (sv) { try { value = JSON.parse(atob(sv)); } catch {} }
-  if (out?.status?.Failure) throw new Error(JSON.stringify(out.status.Failure).slice(0, 200));
-  return { hash, value };
-}
+export { callVault, signIn, signOut, currentUser } from "./privy";

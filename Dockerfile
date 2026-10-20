@@ -7,6 +7,8 @@ RUN cd web && npm ci
 COPY shared shared
 COPY keeper keeper
 COPY web web
+ARG VITE_PRIVY_APP_ID
+ENV VITE_PRIVY_APP_ID=$VITE_PRIVY_APP_ID
 RUN cd web && npx vite build && rm -rf node_modules
 ENV SERVE_WEB=1 NODE_ENV=production
 CMD ["node", "keeper/index.mjs"]

@@ -21,7 +21,7 @@ hmac = "0.12"
 hkdf = "0.12"
 hex = "0.4"
 base64 = "0.22"
-rsa = { version = "0.9", default-features = false, features = ["sha2", "std"] }
+p256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"] }
 ecies = { version = "0.2", default-features = false, features = ["pure", "std"] }
 libsecp256k1 = "0.7"
 wasi-http-client = { version = "0.2", optional = true }

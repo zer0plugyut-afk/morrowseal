@@ -10,14 +10,15 @@
     "preview": "vite preview --port 3000"
   },
   "dependencies": {
-    "@fast-auth-near/browser-sdk": "^1.4.2",
-    "@fast-auth-near/javascript-provider": "^1.4.1",
-    "@hot-labs/near-connect": "^0.11.4",
     "@phosphor-icons/react": "^2.1.10",
+    "@privy-io/react-auth": "^3.50.0",
+    "@solana-program/system": "^0.16.0",
+    "@solana-program/token": "^0.18.0",
+    "@solana/kit": "^8.5.0",
     "@unlocalhosted/metalui": "^0.4.1",
     "buffer": "^6.0.3",
     "eciesjs": "^0.5.0",
-    "near-api-js": "^5.1.1",
+    "near-api-js": "^7.3.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.4"
