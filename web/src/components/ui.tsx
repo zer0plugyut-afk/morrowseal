@@ -12,8 +12,9 @@ export function Logo({ to = "/" }: { to?: string }) {
 
 export function useTheme() {
   const [theme, setTheme] = useState<string>(() => document.documentElement.dataset.theme || "light");
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("ms-theme", theme); }, [theme]);
-  return [theme, () => setTheme((t) => (t === "dark" ? "light" : "dark"))] as const;
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  // Persist only an explicit toggle; everyone else gets light (OS preference is ignored).
+  return [theme, () => setTheme((t) => { const n = t === "dark" ? "light" : "dark"; try { localStorage.setItem("ms-theme-choice", n); } catch {} return n; })] as const;
 }
 
 export function ThemeToggle({ className = "icon-btn" }: { className?: string }) {
