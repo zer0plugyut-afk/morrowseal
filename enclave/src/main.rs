@@ -21,7 +21,7 @@ use std::io::{self, Read, Write};
 const KEY_INFO: &[u8] = b"morrowseal:ecies:v1";
 const TOKEN_INFO: &[u8] = b"morrowseal:claim-token:v1";
 pub const VAULT_CONTRACT: &str = "morrowseal-vault.testnet";
-pub const RPC: &str = "https://rpc.testnet.near.org";
+pub const RPC: &str = "https://test.rpc.fastnear.com";
 const KEEPER_PUB: &str = "03576fe93a03cc822fc1216e5ad78e1854a84e47c9c8a7d32d476e2baa3e426459";
 
 #[derive(Deserialize)]

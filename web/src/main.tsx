@@ -5,6 +5,7 @@ import "@unlocalhosted/metalui/icons.css";
 import "@unlocalhosted/metalui/styles.css";
 import "./tokens.css";
 import "./styles.css";
+import "./theme-glass.css";
 import App from "./App";
 import { AuthRoot } from "./lib/privy";
 

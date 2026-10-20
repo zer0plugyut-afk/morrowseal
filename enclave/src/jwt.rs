@@ -7,6 +7,8 @@ use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 
 pub const ISSUER: &str = "privy.io";
 pub const APP_ID: &str = env!("PRIVY_APP_ID");
+/// Privy's client API requires an allowed Origin; this is the app's own origin.
+pub const APP_ORIGIN: &str = match option_env!("APP_ORIGIN") { Some(o) => o, None => "https://morrowseal-production.up.railway.app" };
 
 pub fn verified_email(token: &str) -> Result<String, String> {
     let parts: Vec<&str> = token.split('.').collect();
@@ -30,7 +32,7 @@ pub fn verified_email(token: &str) -> Result<String, String> {
     if c["exp"].as_u64().unwrap_or(0) < now { return Err("sign-in expired, sign in again".into()); }
     let sub = c["sub"].as_str().ok_or("no subject")?;
     let me: serde_json::Value = serde_json::from_slice(&crate::net::get_with("https://auth.privy.io/api/v1/users/me",
-        &[("Authorization", &format!("Bearer {token}")), ("privy-app-id", APP_ID)])?).map_err(|_| "user json")?;
+        &[("Authorization", &format!("Bearer {token}")), ("privy-app-id", APP_ID), ("Origin", APP_ORIGIN)])?).map_err(|_| "user json")?;
     let u = if me["user"].is_object() { &me["user"] } else { &me };
     if u["id"] != sub { return Err("sign-in user mismatch".into()); }
     let emails = verified_emails(u);

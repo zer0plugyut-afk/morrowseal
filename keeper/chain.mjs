@@ -1,5 +1,5 @@
 import { connect, keyStores, KeyPair } from "near-api-js";
-export const RPC = process.env.NEAR_RPC || "https://rpc.testnet.near.org";
+export const RPC = process.env.NEAR_RPC || "https://test.rpc.fastnear.com";
 export async function view(contract, method, args = {}) {
   const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "call_function", finality: "optimistic", account_id: contract, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") } }) });
   const j = await r.json();

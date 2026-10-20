@@ -11,7 +11,7 @@ import { namedEmail, sendMail } from "./email.mjs";
 import { view } from "./chain.mjs";
 import { VAULT_CONTRACT } from "../shared/morrowseal.mjs";
 const namedSent = new Set();
-const RPC_UPSTREAMS = (process.env.RPC_UPSTREAMS || "https://test.rpc.fastnear.com,https://rpc.testnet.near.org,https://neart.lava.build,https://rpc.testnet.pagoda.co").split(",");
+const RPC_UPSTREAMS = (process.env.RPC_UPSTREAMS || "https://test.rpc.fastnear.com,https://neart.lava.build,https://rpc.testnet.pagoda.co").split(",");
 
 const PORT = Number(process.env.PORT || 8790);
 const HOST = process.env.PORT ? "0.0.0.0" : "127.0.0.1";
@@ -74,6 +74,7 @@ http.createServer(async (req, res) => {
           const r = await fetch(up, { method: "POST", headers: { "content-type": "application/json" }, body: raw, signal: AbortSignal.timeout(m.startsWith("send") || m.startsWith("broadcast") ? 60000 : 12000) });
           if (r.status === 429 || r.status >= 500) { lastErr = `${up} ${r.status}`; continue; }
           const text = await r.text();
+          if (/"code"\s*:\s*-429|DEPRECATED/.test(text.slice(0, 400))) { lastErr = `${up} deprecated/limited`; continue; }
           res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
           return res.end(text);
         } catch (e) { lastErr = `${up} ${e.message}`; }
