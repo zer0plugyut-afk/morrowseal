@@ -6,7 +6,7 @@ import { RPC } from "./chain.mjs";
 const APP_ID = process.env.PRIVY_APP_ID || "";
 const AMOUNT = BigInt(process.env.FUND_YOCTO || "250000000000000000000000"); // 0.25 NEAR
 const jwks = APP_ID ? createRemoteJWKSet(new URL(`https://auth.privy.io/api/v1/apps/${APP_ID}/jwks.json`)) : null;
-const fundedUsers = new Set();
+const fundedUsers = new Map(); // sub -> count of funded accounts
 let today = { day: "", n: 0 };
 
 async function exists(id) {
@@ -22,12 +22,14 @@ export async function fund(ops, bearer, account) {
   try { ({ payload: { sub } } = await jwtVerify(bearer || "", jwks, { issuer: "privy.io", audience: APP_ID })); }
   catch { return { code: 401, error: "Please sign in again." }; }
   if (await exists(account)) return { code: 200, funded: false };
-  if (fundedUsers.has(sub)) return { code: 409, error: "This sign-in already has an account." };
+  // Account not on chain yet: allow a few top-ups per sign-in (a previous top-up may have failed,
+  // or Privy may have issued a fresh wallet), but cap it so one sign-in can't drain the keeper.
+  if ((fundedUsers.get(sub) || 0) >= 3) return { code: 409, error: "This sign-in already has an account." };
   const d = new Date().toISOString().slice(0, 10);
   if (today.day !== d) today = { day: d, n: 0 };
   if (++today.n > Number(process.env.FUND_DAILY_CAP || 200)) return { code: 429, error: "Daily limit reached, try tomorrow." };
-  fundedUsers.add(sub);
   const r = await ops.sendMoney(account, AMOUNT);
+  fundedUsers.set(sub, (fundedUsers.get(sub) || 0) + 1);
   return { code: 200, funded: true, tx: r.transaction.hash };
 }
 
