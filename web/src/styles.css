@@ -277,7 +277,7 @@ p { margin: 0; }
   .stepper li::before, .stepper li::after { left: calc(50% + 22px); right: calc(-50% + 22px); top: 17px; bottom: auto; width: auto; height: 2px; }
   .stepper .lbl { padding: 0; } .stepper .lbl span { display: none; } .stepper .lbl b { font-size: 12px; }
   .panel { padding: 22px 20px 18px; } .field-row { grid-template-columns: 1fr; } .stepper.rail { margin: 0 -4px; } .stepper.rail .lbl b { font-size: 11px; }
-  .heir-row { grid-template-columns: 1fr 40px; } .heir-row .input:nth-child(2) { grid-column: 1 / 2; }
+  .heir-row { grid-template-columns: 1fr 40px; }
   .kv { grid-template-columns: 1fr; gap: 2px 0; } .kv dd { margin-bottom: 10px; }
   .claim-card { padding: 28px 22px; }
 }
@@ -376,7 +376,6 @@ dd .heir-chips { justify-content: flex-start; }
 .empty-state p { max-width: 46ch; line-height: 1.55; }
 @media (max-width: 760px) {
   .heir-row { grid-template-columns: 40px minmax(0,1fr) 40px; }
-  .heir-row .input:nth-of-type(2) { grid-column: 2 / 3; }
   .nav-cta { display: none; }
 }
 .chip-muted { background: var(--surface-alt); color: var(--muted, #757170); }
@@ -385,3 +384,13 @@ dd .heir-chips { justify-content: flex-start; }
 .claim-wide .gift-files, .claim-wide .letter { text-align: left; }
 .text-preview { max-height: 360px; overflow: auto; white-space: pre; overflow-wrap: normal; }
 @media (max-width: 640px) { .text-preview { max-height: 260px; } }
+/* Heir rows: explicit areas so nothing gets squeezed. Desktop: one compact line. */
+.heir-row { display: grid; grid-template-columns: 40px minmax(0,1fr) minmax(0,1.3fr) 40px; grid-template-areas: "av name email del"; gap: 10px; align-items: center; }
+.heir-row > .heir-av { grid-area: av; } .heir-row > .heir-name { grid-area: name; } .heir-row > .heir-email { grid-area: email; } .heir-row > .heir-del { grid-area: del; }
+.heir-row > .input { min-width: 0; width: 100%; grid-column: auto; }
+@media (max-width: 639px) {
+  .heir-row { grid-template-columns: 40px minmax(0,1fr) 40px; grid-template-areas: "av name del" ". email email"; row-gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+  .heir-row > .heir-del { justify-self: end; }
+  .seg { display: flex; } .seg button { flex: 1 1 auto; padding: 8px 12px; }
+  .review > div { flex-wrap: wrap; } .review > div b { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+}

@@ -112,9 +112,9 @@ export default function Create() {
               <div className="form">
                 {heirs.map((h, i) => (<div className="heir-row" key={i}>
                   <span className="heir-av"><Persona email={h.email} name={h.name || "?"} /></span>
-                  <input className="input" placeholder="Name" value={h.name} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <input className="input" placeholder="email@example.com" type="email" value={h.email} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} />
-                  <button className="icon-btn" style={{ height: 48, width: 40 }} disabled={heirs.length === 1} onClick={() => setHeirs(heirs.filter((_, j) => j !== i))} aria-label="Remove heir"><Trash size={16} /></button>
+                  <input className="input heir-name" placeholder="Name" aria-label="Heir name" value={h.name} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                  <input className="input heir-email" placeholder="Email" aria-label="Heir email" type="email" inputMode="email" autoComplete="email" value={h.email} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} />
+                  <button className="icon-btn heir-del" style={{ height: 48, width: 40 }} disabled={heirs.length === 1} onClick={() => setHeirs(heirs.filter((_, j) => j !== i))} aria-label="Remove heir"><Trash size={16} /></button>
                 </div>))}
                 {heirs.length < 8 && <button className="btn btn-ghost btn-sm" style={{ justifySelf: "start" }} onClick={() => setHeirs([...heirs, { name: "", email: "" }])}><Plus size={16} /> Add another heir</button>}
               </div>
