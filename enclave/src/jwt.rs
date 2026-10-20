@@ -1,6 +1,7 @@
-//! ES256 check of a Privy identity token: signature against the app's JWKS, issuer, audience
-//! (the Morrowseal Privy app id, compiled in), expiry, and the email linked to the account.
-//! Privy verifies the email with a one-time code before it is ever linked.
+//! Privy sign-in check. The heir's Privy access token is verified here (ES256 against the app's
+//! JWKS, issuer privy.io, audience = the Morrowseal app id compiled in, not expired). The enclave
+//! then asks Privy itself, over TLS from inside the TEE, which email is linked to that user.
+//! Privy only links an email after a one-time code sent to it.
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as B64, Engine};
 use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 
@@ -26,9 +27,12 @@ pub fn verified_email(token: &str) -> Result<String, String> {
     let aud_ok = c["aud"] == APP_ID || c["aud"].as_array().map(|a| a.iter().any(|x| x == APP_ID)).unwrap_or(false);
     if !aud_ok { return Err("jwt audience".into()); }
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
-    if c["exp"].as_u64().unwrap_or(0) + 300 < now { return Err("sign-in expired, sign in again".into()); }
-    let la = c["linked_accounts"].as_str().ok_or("no linked accounts in token")?;
-    let la: serde_json::Value = serde_json::from_str(la).map_err(|_| "linked accounts json")?;
-    la.as_array().and_then(|a| a.iter().find(|x| x["type"] == "email")).and_then(|x| x["address"].as_str())
+    if c["exp"].as_u64().unwrap_or(0) < now { return Err("sign-in expired, sign in again".into()); }
+    let sub = c["sub"].as_str().ok_or("no subject")?;
+    let me: serde_json::Value = serde_json::from_slice(&crate::net::get_with("https://auth.privy.io/api/v1/users/me",
+        &[("Authorization", &format!("Bearer {token}")), ("privy-app-id", APP_ID)])?).map_err(|_| "user json")?;
+    let u = if me["user"].is_object() { &me["user"] } else { &me };
+    if u["id"] != sub { return Err("sign-in user mismatch".into()); }
+    u["linked_accounts"].as_array().and_then(|a| a.iter().find(|x| x["type"] == "email")).and_then(|x| x["address"].as_str())
         .map(|s| s.to_string()).ok_or("no email linked to this sign-in".into())
 }

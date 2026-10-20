@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, UploadSimple, FileText, Trash, Plus, LockKey, CircleNotch, CheckCircle } from "@phosphor-icons/react";
+import { Check, UploadSimple, FileText, Trash, Plus, LockKey, CircleNotch, CheckCircle, ArrowLeft, ArrowRight } from "@phosphor-icons/react";
 import { useToast } from "@unlocalhosted/metalui";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
@@ -66,9 +66,10 @@ export default function Create() {
 
   return (
     <>
+      <div className="create-wrap">
       <Top title="Create a vault" sub="Five short steps. Nothing readable leaves this browser." />
       <div className="create">
-        <ol className="card stepper" aria-label="Steps">
+        <ol className="stepper rail" aria-label="Steps">
           {STEPS.map(([t, s], i) => (
             <li key={t} className={i < step ? "done" : i === step ? "current" : "upcoming"} onClick={() => i < step && phase < 0 && setStep(i)} aria-current={i === step ? "step" : undefined}>
               <span className="circ">{i < step ? <Check size={16} weight="bold" /> : i + 1}</span>
@@ -77,13 +78,14 @@ export default function Create() {
           ))}
         </ol>
         <section className="card panel" key={step}>
+          <div className="panel-kicker"><span>Step {step + 1} of {STEPS.length}</span><span className="kbar"><i style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></span></div>
           <div className="fade-up">
             {step === 0 && (<>
               <h2>Name it, and say something</h2>
               <p className="muted">The title stays on this device. Your message is sealed with the files and shown to your heirs.</p>
               <div className="form">
-                <div className="field"><label htmlFor="t">Vault title</label><input id="t" className="input" placeholder="For Ama" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} /></div>
-                <div className="field"><label htmlFor="o">Your name, as your heirs know you</label><input id="o" className="input" placeholder="Kofi" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} maxLength={60} /><span className="hint">Used in the email: “Kofi left something for you”.</span></div>
+                <div className="field-row"><div className="field"><label htmlFor="t">Vault title</label><input id="t" className="input" placeholder="For Ama" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} /></div>
+                <div className="field"><label htmlFor="o">Your name</label><input id="o" className="input" placeholder="Kofi" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} maxLength={60} /></div></div><span className="hint" style={{ marginTop: -8 }}>Your name appears in the email: “Kofi left something for you”.</span>
                 <div className="field"><label htmlFor="m">A message (optional)</label><textarea id="m" className="textarea" placeholder="Everything you need is in here…" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={4000} /></div>
               </div>
             </>)}
@@ -137,11 +139,12 @@ export default function Create() {
             </>)}
           </div>
           <div className="panel-foot">
-            <button className="btn btn-ghost" disabled={step === 0 || phase >= 0} onClick={() => setStep(step - 1)}>Back</button>
-            {step < 4 ? <button className="btn btn-dark" disabled={!valid[step]} onClick={() => setStep(step + 1)}>Continue</button>
-              : <button className="btn btn-brand" disabled={phase >= 0} onClick={seal}><LockKey size={18} weight="bold" /> Seal vault</button>}
+            {step > 0 ? <button className="btn btn-text" disabled={phase >= 0} onClick={() => setStep(step - 1)}><ArrowLeft size={16} /> Back</button> : <span />}
+            {step < 4 ? <button className="btn btn-pill" disabled={!valid[step]} onClick={() => setStep(step + 1)}>Continue <ArrowRight size={16} weight="bold" /></button>
+              : <button className="btn btn-pill" disabled={phase >= 0} onClick={seal}><LockKey size={17} weight="bold" /> Seal vault</button>}
           </div>
         </section>
+      </div>
       </div>
     </>
   );

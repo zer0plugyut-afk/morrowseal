@@ -36,7 +36,7 @@ export default function Shell() {
           )}
         </div>
       </aside>
-      <main className="main" key={loc.pathname}><div className="fade-up"><Outlet /></div></main>
+      <main className="main" key={loc.pathname}><div className="fade-up page-narrow"><Outlet /></div></main>
       <nav className="bottom-nav">
         {NAV.filter((n) => n.label !== "Settings").map(({ to, icon: I, label, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "active" : "")}>{({ isActive }) => (<><I size={22} weight={isActive ? "fill" : "regular"} />{label}</>)}</NavLink>

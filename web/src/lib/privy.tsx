@@ -1,6 +1,6 @@
 // Privy is the only sign-in. Email + one-time code; every user gets a NEAR testnet implicit
 // account held by Privy (ed25519, signed with signRawHash). The keeper tops up new accounts once.
-import { PrivyProvider, useIdentityToken, useLogin, useLogout, usePrivy, getAccessToken } from "@privy-io/react-auth";
+import { PrivyProvider, useLogin, useLogout, usePrivy, getAccessToken } from "@privy-io/react-auth";
 import { useCreateWallet, useSignRawHash } from "@privy-io/react-auth/extended-chains";
 import { useEffect, useRef, type ReactNode } from "react";
 import { actions, createTransaction, PublicKey, SignedTransaction, Signature, baseDecode, baseEncode } from "near-api-js";
@@ -21,16 +21,15 @@ export const onAuthChange = (f: () => void) => { listeners.add(f); return () => 
 
 function BridgeInner() {
   const { ready, authenticated, user } = usePrivy();
-  const { identityToken } = useIdentityToken();
   const { login } = useLogin({ onComplete: () => { B.loginWaiters.splice(0).forEach((f) => f(true)); }, onError: () => { B.loginWaiters.splice(0).forEach((f) => f(false)); } });
   const { logout } = useLogout();
   const { createWallet } = useCreateWallet();
   const { signRawHash } = useSignRawHash();
   const prev = useRef("");
-  B.cur = { ready, authenticated, user, identityToken, login: () => login({ loginMethods: ["email"] }), logout, createWallet: createWallet as any, signRawHash: signRawHash as any };
+  B.cur = { ready, authenticated, user, identityToken: null, login: () => login({ loginMethods: ["email"] }), logout, createWallet: createWallet as any, signRawHash: signRawHash as any };
   useEffect(() => {
     if (ready) B.waiters.splice(0).forEach((f) => f());
-    const k = `${ready}|${authenticated}|${user?.id}|${nearWalletOf(user)}|${identityToken?.slice(-8)}`;
+    const k = `${ready}|${authenticated}|${user?.id}|${nearWalletOf(user)}|`;
     if (k !== prev.current) { prev.current = k; listeners.forEach((f) => f()); }
   });
   return null;
@@ -39,7 +38,7 @@ function BridgeInner() {
 export function AuthRoot({ children }: { children: ReactNode }) {
   if (!PRIVY_APP_ID) return <>{children}</>;
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ["email"], appearance: { theme: "light", accentColor: "#3a7bfa", showWalletLoginFirst: false, landingHeader: "Sign in to Morrowseal", loginMessage: "Enter your email. We'll send you a one-time code." }, embeddedWallets: { showWalletUIs: false } } as any}>
+    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ["email"], appearance: { theme: "light", accentColor: "#3a7bfa", showWalletLoginFirst: false, landingHeader: "Sign in to Morrowseal", loginMessage: "Enter your email. We'll send you a one-time code." }, embeddedWallets: { showWalletUIs: false, ethereum: { createOnLogin: "off" }, solana: { createOnLogin: "off" } } } as any}>
       <BridgeInner />{children}
     </PrivyProvider>
   );
@@ -72,10 +71,8 @@ export async function signIn(): Promise<{ email: string | null; account: string 
 }
 export async function signOut() { try { await B.cur?.logout(); } catch {} }
 
-export async function identityToken(): Promise<string | null> {
-  for (let i = 0; i < 20 && !B.cur?.identityToken; i++) await new Promise((r) => setTimeout(r, 250));
-  return B.cur?.identityToken ?? null;
-}
+// The enclave verifies this Privy access token and asks Privy which email it belongs to.
+export async function identityToken(): Promise<string | null> { try { return await getAccessToken(); } catch { return null; } }
 
 async function rpc(method: string, params: any) {
   const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });

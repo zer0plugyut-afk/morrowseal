@@ -133,9 +133,9 @@ export function Settings() {
   const toast = useToast();
   const exportLocal = () => { const b = new Blob([JSON.stringify(localVaults(), null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "morrowseal-device-notes.json"; a.click(); };
   return (
-    <>
+    <div className="page-form">
       <Top title="Settings" />
-      <div className="card card-pad" style={{ maxWidth: 720 }}>
+      <div className="card card-pad">
         <div className="list">
           <div className="row"><div className="grow"><div className="t">Appearance</div><div className="s">Light follows Trezu's palette; dark keeps the same warm ink.</div></div><button className="btn btn-ghost btn-sm" onClick={toggle}>{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} {theme === "dark" ? "Light" : "Dark"}</button></div>
           <div className="row"><div className="grow"><div className="t">Timezone</div><div className="s">All times show in {Intl.DateTimeFormat().resolvedOptions().timeZone} ({tzLabel()}).</div></div></div>
@@ -145,6 +145,6 @@ export function Settings() {
           {account && <div className="row"><div className="grow"><div className="t">Signed in</div><div className="s mono">{account}</div></div><button className="btn btn-ghost btn-sm" onClick={logout}>Sign out</button></div>}
         </div>
       </div>
-    </>
+    </div>
   );
 }
