@@ -1,7 +1,7 @@
 //! Privy sign-in check. The heir's Privy access token is verified here (ES256 against the app's
 //! JWKS, issuer privy.io, audience = the Morrowseal app id compiled in, not expired). The enclave
 //! then asks Privy itself, over TLS from inside the TEE, which email is linked to that user.
-//! Privy only links an email after a one-time code sent to it.
+//! Privy only links an email after a one-time code, or a Google account Google has verified.
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as B64, Engine};
 use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 
@@ -33,6 +33,16 @@ pub fn verified_email(token: &str) -> Result<String, String> {
         &[("Authorization", &format!("Bearer {token}")), ("privy-app-id", APP_ID)])?).map_err(|_| "user json")?;
     let u = if me["user"].is_object() { &me["user"] } else { &me };
     if u["id"] != sub { return Err("sign-in user mismatch".into()); }
-    u["linked_accounts"].as_array().and_then(|a| a.iter().find(|x| x["type"] == "email")).and_then(|x| x["address"].as_str())
-        .map(|s| s.to_string()).ok_or("no email linked to this sign-in".into())
+    let emails = verified_emails(u);
+    if emails.is_empty() { return Err("no email linked to this sign-in".into()); }
+    Ok(emails.join(","))
+}
+
+/// Emails Privy has verified for this user: an email account (one-time code) or a Google account.
+fn verified_emails(u: &serde_json::Value) -> Vec<String> {
+    u["linked_accounts"].as_array().map(|a| a.iter().filter_map(|x| match x["type"].as_str() {
+        Some("email") => x["address"].as_str(),
+        Some("google_oauth") => x["email"].as_str(),
+        _ => None,
+    }).map(|s| s.trim().to_lowercase()).collect()).unwrap_or_default()
 }

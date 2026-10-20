@@ -88,7 +88,7 @@ export default function Claim() {
             <div className="banner warn" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> This link is missing its private part. Open the button in your email again.</div>
           ) : (
             <div className="claim-actions">
-              {authConfigured() ? <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => claim()}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} {heirEmail ? `Continue as ${heirEmail}` : "Continue with email"}</button> : <p>Sign-in is being set up. Try again shortly.</p>}
+              {authConfigured() ? <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => claim()}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} {heirEmail ? `Continue as ${heirEmail}` : "Sign in to open"}</button> : <p>Sign-in is being set up. Try again shortly.</p>}
               {phase === "claim" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> The enclave is checking your link…</p>}
               {phase === "open" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> Decrypting in your browser…</p>}
             </div>

@@ -26,7 +26,7 @@ function BridgeInner() {
   const { createWallet } = useCreateWallet();
   const { signRawHash } = useSignRawHash();
   const prev = useRef("");
-  B.cur = { ready, authenticated, user, identityToken: null, login: () => login({ loginMethods: ["email"] }), logout, createWallet: createWallet as any, signRawHash: signRawHash as any };
+  B.cur = { ready, authenticated, user, identityToken: null, login: () => login({ loginMethods: ["email", "google"] }), logout, createWallet: createWallet as any, signRawHash: signRawHash as any };
   useEffect(() => {
     if (ready) B.waiters.splice(0).forEach((f) => f());
     const k = `${ready}|${authenticated}|${user?.id}|${nearWalletOf(user)}|`;
@@ -38,7 +38,7 @@ function BridgeInner() {
 export function AuthRoot({ children }: { children: ReactNode }) {
   if (!PRIVY_APP_ID) return <>{children}</>;
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ["email"], appearance: { theme: "light", accentColor: "#3a7bfa", showWalletLoginFirst: false, landingHeader: "Sign in to Morrowseal", loginMessage: "Enter your email. We'll send you a one-time code." }, embeddedWallets: { showWalletUIs: false, ethereum: { createOnLogin: "off" }, solana: { createOnLogin: "off" } } } as any}>
+    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ["email", "google"], appearance: { theme: "light", accentColor: "#3a7bfa", showWalletLoginFirst: false, landingHeader: "Sign in to Morrowseal", loginMessage: "Continue with Google, or enter your email for a one-time code." }, embeddedWallets: { showWalletUIs: false, ethereum: { createOnLogin: "off" }, solana: { createOnLogin: "off" } } } as any}>
       <BridgeInner />{children}
     </PrivyProvider>
   );
@@ -53,7 +53,7 @@ export async function currentUser(): Promise<{ email: string | null; account: st
   await whenReady();
   const b = B.cur!;
   if (!b.authenticated) return null;
-  return { email: b.user?.email?.address ?? null, account: nearWalletOf(b.user) };
+  return { email: b.user?.email?.address ?? b.user?.google?.email ?? null, account: nearWalletOf(b.user) };
 }
 
 export async function signIn(): Promise<{ email: string | null; account: string }> {
@@ -67,7 +67,7 @@ export async function signIn(): Promise<{ email: string | null; account: string 
   let account = nearWalletOf(B.cur!.user);
   if (!account) account = (await B.cur!.createWallet({ chainType: "near" })).wallet.address as string;
   await ensureFunded(account);
-  return { email: B.cur!.user?.email?.address ?? null, account };
+  return { email: B.cur!.user?.email?.address ?? B.cur!.user?.google?.email ?? null, account };
 }
 export async function signOut() { try { await B.cur?.logout(); } catch {} }
 

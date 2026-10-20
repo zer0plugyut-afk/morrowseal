@@ -166,7 +166,7 @@ fn run(input: Input) -> Result<serde_json::Value, String> {
             let mut verified_email = false;
             if let Some(t) = req.id_token.as_deref() {
                 let email = jwt::verified_email(t)?;
-                if email.trim().to_lowercase() != heir.email.trim().to_lowercase() { return Err("signed-in email is not the heir's email".into()); }
+                if !email.split(',').any(|e| e == heir.email.trim().to_lowercase()) { return Err("signed-in email is not the heir's email".into()); }
                 verified_email = true;
             }
             let gift = serde_json::json!({ "vault_id": id, "owner_name": s.owner_name, "heir_name": heir.name, "message": s.message, "file_key": s.file_key, "files": s.files });

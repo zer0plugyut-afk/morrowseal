@@ -14,7 +14,7 @@ const STEPS = [
   ["Name & message", "What it's for"],
   ["Files", "Encrypted here first"],
   ["Heirs", "Who receives it"],
-  ["Check-in rule", "How often you say hi"],
+  ["Check-in rule", "Your rhythm"],
   ["Review & seal", "One transaction"],
 ];
 const RHYTHMS = [["2 min (demo)", 120], ["1 week", 604800], ["1 month", 2592000], ["3 months", 7776000], ["1 year", 31536000]] as const;
