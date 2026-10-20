@@ -5,6 +5,7 @@ import Shell from "./app/Shell";
 import { AppState } from "./app/state";
 import Vaults, { VaultDetail } from "./pages/Vaults";
 import Create from "./pages/Create";
+import Waiting from "./pages/Waiting";
 import Claim from "./pages/Claim";
 import { Heirs, CheckIns, Activity, Proof, Settings } from "./pages/Misc";
 
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/claim/:id/:i" element={<Claim />} />
+          <Route path="/waiting/:id" element={<Waiting />} />
           <Route path="/app" element={<AppState><Shell /></AppState>}>
             <Route index element={<Vaults />} />
             <Route path="vault/:id" element={<VaultDetail />} />

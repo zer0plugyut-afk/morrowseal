@@ -5,7 +5,11 @@ import path from "node:path";
 import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
 import { tick, relayClaim } from "./lib.mjs";
-import { fund } from "./fund.mjs";
+import { fund, privyUser } from "./fund.mjs";
+import { namedEmail, sendMail } from "./email.mjs";
+import { view } from "./chain.mjs";
+import { VAULT_CONTRACT } from "../shared/morrowseal.mjs";
+const namedSent = new Set();
 
 const PORT = Number(process.env.PORT || 8790);
 const HOST = process.env.PORT ? "0.0.0.0" : "127.0.0.1";
@@ -50,6 +54,23 @@ http.createServer(async (req, res) => {
       const j = JSON.parse((await body(req, 4096)).toString());
       const { code, ...r } = await fund(ops, (req.headers.authorization || "").replace(/^Bearer /, ""), j.account);
       return json(res, code, r);
+    }
+    if (url.pathname === "/api/named" && req.method === "POST") {
+      if (limited(req, 4)) return json(res, 429, { error: "slow down" });
+      if (!(await privyUser((req.headers.authorization || "").replace(/^Bearer /, "")))) return json(res, 401, { error: "Please sign in again." });
+      const j = JSON.parse((await body(req, 16 * 1024)).toString());
+      if (!Number.isInteger(j.vault_id) || !Array.isArray(j.heirs)) return json(res, 400, { error: "bad request" });
+      const v = await view(VAULT_CONTRACT, "get_vault", { vault_id: j.vault_id });
+      const ageMs = Date.now() - Number(BigInt(v?.created_ns || 0) / 1_000_000n);
+      if (!v || v.status !== "Active" || ageMs > 20 * 60_000 || j.heirs.length > v.heirs || namedSent.has(j.vault_id)) return json(res, 409, { error: "not eligible" });
+      namedSent.add(j.vault_id);
+      const out = [];
+      for (const h of j.heirs) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(h.email || ""))) continue;
+        try { const id = await sendMail({ to: h.email.trim(), toName: String(h.name || "").slice(0, 60), ...namedEmail({ heirName: String(h.name || "").slice(0, 60), ownerName: String(j.owner_name || "").slice(0, 60), appUrl: APP_URL, vaultId: j.vault_id }) }); out.push("sent"); console.log(new Date().toISOString(), "named notice vault", j.vault_id, "->", id); }
+        catch (e) { out.push("failed"); console.log(new Date().toISOString(), "named notice vault", j.vault_id, "FAILED", e.message.slice(0, 200)); }
+      }
+      return json(res, 200, { results: out });
     }
     if (url.pathname === "/api/claim" && req.method === "POST") {
       if (limited(req, 6)) return json(res, 429, { error: "Too many attempts, wait a minute." });

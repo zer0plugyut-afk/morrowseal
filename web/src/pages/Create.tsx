@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, UploadSimple, FileText, Trash, Plus, LockKey, CircleNotch, CheckCircle, ArrowLeft, ArrowRight } from "@phosphor-icons/react";
-import { useToast } from "@unlocalhosted/metalui";
+import { Check, UploadSimple, FileText, Trash, Plus, LockKey, CircleNotch, CheckCircle, ArrowLeft, ArrowRight, EnvelopeSimple } from "@phosphor-icons/react";
+import { useToast, Avatar } from "@unlocalhosted/metalui";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { buildVault } from "@shared/morrowseal.mjs";
-import { pinBytes } from "../lib/api";
+import { pinBytes, notifyNamed } from "../lib/api";
 import { callVault } from "../lib/near";
 import { saveLocal } from "../lib/local";
 import { span } from "../lib/format";
@@ -53,6 +53,7 @@ export default function Create() {
       const r = await callVault("create_vault", { commitment: v.commitment, cid: v.cid, heirs: v.heirs, interval_s: interval, grace_s: grace }, { tgas: 30 });
       let id = r.value;
       if (typeof id !== "number") { await new Promise((ok) => setTimeout(ok, 2500)); await refresh(); }
+      if (typeof id === "number") notifyNamed(id, ownerName.trim(), heirs.map((h) => ({ name: h.name.trim(), email: h.email.trim() })));
       setPhase(3);
       if (typeof id === "number") saveLocal(id, { title: title.trim(), heirs: heirs.map((h) => ({ name: h.name.trim(), email: h.email.trim() })), files: files.map((f) => ({ name: f.name, size: f.size })), createdAt: Date.now() });
       toast.show({ title: "Vault sealed", sub: `tx ${r.hash.slice(0, 8)}…`, tone: "success" });
@@ -99,7 +100,7 @@ export default function Create() {
                   <div className="muted" style={{ fontSize: 14, marginTop: 4 }}>Letters, PDFs, photos, a password list</div>
                   <input ref={input} type="file" multiple hidden onChange={(e) => addFiles(e.target.files)} />
                 </div>
-                {files.map((f, i) => (<div className="file-row" key={i}><FileText size={20} /><div className="grow" style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div><div className="muted" style={{ fontSize: 13 }}>{(f.size / 1024).toFixed(1)} KB</div></div><button className="icon-btn" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label="Remove"><Trash size={16} /></button></div>))}
+                {files.map((f, i) => (<div className="file-row" key={i}><FileText size={20} /><div className="grow" style={{ flex: 1, minWidth: 0 }}><div className="fname" style={{ fontWeight: 600 }} title={f.name}>{f.name}</div><div className="muted" style={{ fontSize: 13 }}>{(f.size / 1024).toFixed(1)} KB</div></div><button className="icon-btn" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label="Remove"><Trash size={16} /></button></div>))}
                 {files.length > 0 && <div className="muted" style={{ fontSize: 13 }}>{files.length} file(s), {(total / 1024).toFixed(1)} KB total</div>}
               </div>
             </>)}
@@ -108,6 +109,7 @@ export default function Create() {
               <p className="muted">Names and emails are sealed inside the vault. The chain only learns how many heirs there are. Each heir signs in with this email to open it.</p>
               <div className="form">
                 {heirs.map((h, i) => (<div className="heir-row" key={i}>
+                  <span className="heir-av"><Avatar name={h.name || "?"} /></span>
                   <input className="input" placeholder="Name" value={h.name} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
                   <input className="input" placeholder="email@example.com" type="email" value={h.email} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} />
                   <button className="icon-btn" style={{ height: 48, width: 40 }} disabled={heirs.length === 1} onClick={() => setHeirs(heirs.filter((_, j) => j !== i))} aria-label="Remove heir"><Trash size={16} /></button>
@@ -130,11 +132,12 @@ export default function Create() {
               <div className="review" style={{ marginTop: 22 }}>
                 <div><span>Title</span><b>{title}</b></div>
                 <div><span>From</span><b>{ownerName}</b></div>
-                <div><span>Files</span><b>{files.length ? files.map((f) => f.name).join(", ") : "Message only"}</b></div>
-                <div><span>Heirs</span><b>{heirs.map((h) => h.name).join(", ")}</b></div>
+                <div><span>Files</span><b title={files.map((f) => f.name).join(", ")}>{files.length ? files.map((f) => f.name).join(", ") : "Message only"}</b></div>
+                <div><span>Heirs</span><b className="heir-chips">{heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Avatar name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</b></div>
                 <div><span>Releases after</span><b>{span(interval + grace)} of silence</b></div>
                 <div><span>Stored on NEAR</span><b>hash · IPFS address · {heirs.length} {heirs.length === 1 ? 'heir' : 'heirs'} · times</b></div>
               </div>
+              <div className="banner" style={{ marginTop: 16 }}><EnvelopeSimple size={18} /> <div>Each heir gets a short note now saying they were named (nothing inside is shared). The email with the link to open it is sent only if you miss your check-in.</div></div>
               {phase >= 0 && <div className="progress-list">{["Reading files", "Encrypting and sealing to the enclave", "Recording the commitment on NEAR", "Done"].map((t, i) => <div key={t} className={i < phase ? "ok" : i === phase ? "on" : ""}>{i < phase ? <CheckCircle size={18} weight="fill" /> : i === phase ? <CircleNotch size={18} className="spin" /> : <span style={{ width: 18 }} />}{t}</div>)}</div>}
             </>)}
           </div>

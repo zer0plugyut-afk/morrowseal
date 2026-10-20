@@ -50,7 +50,9 @@ export async function mailHeirs(ops, v, appUrl) {
     if (v.claims[h.i]) continue;
     const link = `${appUrl.replace(/\/$/, "")}/claim/${v.id}/${h.i}#t=${h.token}`;
     const m = heirEmail({ heirName: h.name, ownerName: notice.owner_name, link });
-    const id = await sendMail({ to: h.email, toName: h.name, ...m });
+    let id;
+    try { id = await sendMail({ to: h.email, toName: h.name, ...m }); }
+    catch (e) { log("MAIL FAILED heir", h.i, "of vault", v.id, e.message.slice(0, 200)); throw e; }
     sent.push(id);
     log("mailed heir", h.i, "of vault", v.id, id);
   }

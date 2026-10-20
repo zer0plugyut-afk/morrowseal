@@ -19,3 +19,12 @@ export async function relayClaim(body: { vault_id: number; heir_index: number; c
   return j as { tx: string };
 }
 export const hexToBytes = fromHex;
+
+// Tell each heir they were named (no link, no contents). Best effort; never blocks sealing.
+export async function notifyNamed(vault_id: number, owner_name: string, heirs: { name: string; email: string }[]) {
+  try {
+    const { getAccessToken } = await import("@privy-io/react-auth");
+    const token = await getAccessToken();
+    await fetch("/api/named", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ vault_id, owner_name, heirs }) });
+  } catch {}
+}

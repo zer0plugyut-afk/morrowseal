@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Plus, Heartbeat, UsersThree, Files, ArrowSquareOut, XCircle, ArrowLeft, Clock } from "@phosphor-icons/react";
-import { useToast, StatusBadge } from "@unlocalhosted/metalui";
+import { useToast, StatusBadge, Avatar } from "@unlocalhosted/metalui";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { VaultShelf } from "../components/VaultShelf";
@@ -50,7 +50,20 @@ export function VaultDetail() {
   const [events, setEvents] = useState<ChainEvent[]>([]);
   const v = vaults.find((x) => x.id === vid);
   const local = localVaults()[vid];
-  useEffect(() => { view<ChainEvent[]>("list_events", { from: 0, limit: 100 }).then((e) => setEvents(e.filter((x) => x.vault_id === vid).reverse())).catch(() => {}); }, [vid, v?.checkins, v?.status]);
+  useEffect(() => {
+    let live = true, t: any;
+    const load = async () => {
+      try {
+        const cfg = await view("get_config"); const all: ChainEvent[] = [];
+        for (let f = 0; f < cfg.events; f += 100) all.push(...(await view<ChainEvent[]>("list_events", { from: f, limit: 100 })));
+        if (live) setEvents(all.filter((x) => x.vault_id === vid).reverse());
+      } catch {}
+      if (live) t = setTimeout(load, 10000);
+    };
+    load(); return () => { live = false; clearTimeout(t); };
+  }, [vid]);
+  // While the deadline has passed but the chain still says Active, poll quickly.
+  useEffect(() => { if (!v || v.status !== "Active" || deadline(v) > now) return; const t = setInterval(() => refresh(), 5000); return () => clearInterval(t); }, [v?.status, v && deadline(v) <= now]);
   if (!account) return <NeedWallet what="Sign in with the email that owns this vault." />;
   if (!v) return <div className="card empty"><h3>Loading vault…</h3></div>;
   const left = deadline(v) - now;
@@ -64,11 +77,12 @@ export function VaultDetail() {
       <div className="grid-2">
         <div className="card card-pad">
           <StatusBadge led={v.status === "Active" ? "waiting" : v.status === "Released" ? "live" : "off"}>{v.status.toUpperCase()}</StatusBadge>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 44, letterSpacing: "-.04em", margin: "16px 0 4px" }}>{v.status === "Active" ? (left > 0 ? countdown(left) : "Releasing…") : v.status === "Released" ? "Released" : "Cancelled"}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 44, letterSpacing: "-.04em", margin: "16px 0 4px" }}>{v.status === "Active" ? (left > 0 ? countdown(left) : "Releasing…") : v.status === "Released" ? (v.claims.every(Boolean) ? "Opened" : "Claimable") : "Cancelled"}</div>
           <p className="muted">{v.status === "Active" ? `Releases on ${when(deadline(v))} (${tzLabel()}) unless you check in. You check in every ${span(v.interval_s)}${v.grace_s ? `, plus ${span(v.grace_s)} grace` : ""}.` : v.status === "Released" ? `Released ${when(nsToMs(v.released_ns!))}. ${v.mailed ? "Heirs were emailed." : "Emailing heirs…"}` : "Nothing will be sent."}</p>
           <dl className="kv" style={{ marginTop: 24 }}>
-            <dt>Heirs</dt><dd>{local?.heirs.map((h) => h.name).join(", ") || `${v.heirs} (names are only on the device that made it)`}</dd>
+            <dt>Heirs</dt><dd>{local?.heirs.length ? <span className="heir-chips">{local.heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Avatar name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</span> : `${v.heirs} (names are only on the device that made it)`}</dd>
             <dt>Files</dt><dd>{local?.files.map((f) => f.name).join(", ") || "Sealed"}</dd>
+            <dt>Emails</dt><dd>{v.status === "Released" ? (v.mailed ? "Heirs have been emailed their link." : "Emailing heirs now…") : `Heirs were told they were named. Their link is emailed only if you miss a check-in (after ${span(v.interval_s + v.grace_s)} of silence).`}</dd>
             <dt>Check-ins</dt><dd>{v.checkins} · last {when(nsToMs(v.last_checkin_ns))}</dd>
             <dt>Commitment</dt><dd className="mono">{short(v.commitment, 12, 10)}</dd>
             <dt>Sealed blob</dt><dd><a className="link mono" href={`/api/ipfs/${v.cid}`} target="_blank" rel="noreferrer">{short(v.cid, 12, 8)} <ArrowSquareOut size={12} /></a></dd>
@@ -80,7 +94,8 @@ export function VaultDetail() {
         </div>
         <div className="card card-pad">
           <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.03em", marginBottom: 18 }}>History</h3>
-          <div className="tl">{events.map((e, i) => <div key={i} className="tl-item"><div className="t">{label(e.kind)}</div><div className="s">{when(nsToMs(e.at_ns))} · {short(e.actor, 14, 8)}</div></div>)}</div>
+          {events.length === 0 ? <p className="muted" style={{ marginBottom: 16 }}>Loading this vault's history from NEAR…</p> :
+          <div className="tl">{events.map((e, i) => <div key={i} className="tl-item"><div className="t">{label(e.kind)}</div><div className="s">{when(nsToMs(e.at_ns))} · {e.actor === v.owner ? "you" : e.actor.endsWith(".testnet") ? "the keeper" : short(e.actor, 10, 6)}{e.detail ? ` · ${e.detail}` : ""}</div></div>)}</div>}
           <a className="link" href={`${EXPLORER}/address/${v.owner}`} target="_blank" rel="noreferrer" style={{ fontSize: 14 }}>View your account on NearBlocks <ArrowSquareOut size={12} /></a>
         </div>
       </div>
@@ -88,4 +103,4 @@ export function VaultDetail() {
   );
 }
 
-export const label = (k: string) => ({ vault_created: "Vault sealed", checked_in: "Checked in", vault_updated: "Contents replaced", schedule_changed: "Schedule changed", vault_cancelled: "Cancelled", vault_released: "Released after missed check-in", heirs_notified: "Enclave sealed heir notices", heir_email_sent: "Heirs emailed", heir_claimed: "An heir opened it" } as Record<string, string>)[k] || k;
+export const label = (k: string) => ({ vault_created: "Vault sealed", checked_in: "Checked in", vault_updated: "Contents replaced", schedule_changed: "Schedule changed", vault_cancelled: "Cancelled", vault_released: "Deadline missed", heirs_notified: "Heirs notified", heir_email_sent: "Heirs emailed", heir_claimed: "Claimed" } as Record<string, string>)[k] || k;

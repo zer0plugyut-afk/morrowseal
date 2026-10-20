@@ -22,7 +22,7 @@ export function AppState({ children }: { children: ReactNode }) {
       const vs = await view<Vault[]>("vaults_of", { owner: account });
       const local = localVaults();
       setVaults(vs.sort((a, b) => b.id - a.id).map((v) => ({ ...v, title: local[v.id]?.title || `Vault ${v.id}`, files: local[v.id]?.files.length })));
-    } finally { setLoading(false); }
+    } catch { /* RPC busy; next poll retries */ } finally { setLoading(false); }
   }, [account]);
 
   const [watch, setWatch] = useState(false);

@@ -30,3 +30,8 @@ export async function fund(ops, bearer, account) {
   const r = await ops.sendMoney(account, AMOUNT);
   return { code: 200, funded: true, tx: r.transaction.hash };
 }
+
+export async function privyUser(bearer) {
+  if (!jwks) return null;
+  try { const { payload } = await jwtVerify(bearer || "", jwks, { issuer: "privy.io", audience: APP_ID }); return payload.sub; } catch { return null; }
+}

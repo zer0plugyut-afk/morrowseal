@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple } from "@phosphor-icons/react";
-import { Pagination, useToast } from "@unlocalhosted/metalui";
+import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple, LockKey, PencilSimple, Clock, Warning, Bell, EnvelopeSimple, LockKeyOpen, XCircle, Info, CircleNotch, ClockCounterClockwise } from "@phosphor-icons/react";
+import { Pagination, useToast, Avatar } from "@unlocalhosted/metalui";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent, type Vault } from "../lib/near";
@@ -23,8 +23,8 @@ export function Heirs() {
         {rows.length === 0 ? <div className="empty"><UsersThree size={30} /><h3>No heirs yet</h3><p>Name heirs when you create a vault.</p><Link className="btn btn-dark" to="/app/create">Create a vault</Link></div> :
           <div className="list">{rows.map(({ v, i, h }) => (
             <div className="row" key={`${v.id}-${i}`}>
-              <span className="icon-chip" style={{ width: 40, height: 40, borderRadius: 12 }}>{(h?.name || "?").slice(0, 1).toUpperCase()}</span>
-              <div className="grow"><div className="t">{h?.name || `Heir ${i + 1}`}</div><div className="s">{h?.email || "Sealed (created on another device)"} · {v.title}</div></div>
+              <span style={{ flexShrink: 0 }}><Avatar name={h?.name || `Heir ${i + 1}`} /></span>
+              <div className="grow"><div className="t" title={h?.name}>{h?.name || `Heir ${i + 1}`}</div><div className="s" title={h?.email}>{h?.email || "Sealed (created on another device)"} · {v.title}</div></div>
               <span className={`chip ${v.claims[i] ? "chip-green" : v.status === "Released" ? "chip-amber" : "chip-blue"}`}>{v.claims[i] ? "Opened" : v.status === "Released" ? "Emailed" : "Sealed"}</span>
             </div>))}</div>}
       </div>
@@ -60,23 +60,49 @@ export function CheckIns() {
 }
 
 const PAGE = 10;
+const EV: Record<string, [string, any, string]> = {
+  vault_created: ["Vault sealed", LockKey, "brand"],
+  checked_in: ["Checked in", Heartbeat, "green"],
+  vault_updated: ["Contents replaced", PencilSimple, "muted"],
+  schedule_changed: ["Schedule changed", Clock, "muted"],
+  vault_released: ["Deadline missed", Warning, "amber"],
+  heirs_notified: ["Heirs notified", Bell, "brand"],
+  heir_email_sent: ["Heirs emailed", EnvelopeSimple, "brand"],
+  heir_claimed: ["Claimed", LockKeyOpen, "green"],
+  vault_cancelled: ["Cancelled", XCircle, "muted"],
+};
 export function Activity() {
-  const [events, setEvents] = useState<ChainEvent[]>([]);
+  const [events, setEvents] = useState<ChainEvent[] | null>(null);
   const [page, setPage] = useState(1);
-  const [mine, setMine] = useState(true);
-  const { account, vaults } = useApp();
-  useEffect(() => { (async () => { const cfg = await view("get_config"); const n = cfg.events; const all: ChainEvent[] = []; for (let f = 0; f < n; f += 100) all.push(...(await view<ChainEvent[]>("list_events", { from: f, limit: 100 }))); setEvents(all.reverse()); })().catch(() => {}); }, [vaults.length]);
-  const ids = new Set(vaults.map((v) => v.id));
-  const list = useMemo(() => (mine && account ? events.filter((e) => ids.has(e.vault_id)) : events), [events, mine, account, vaults]);
+  const { account, vaults, watch } = useApp();
+  useEffect(() => {
+    let live = true, t: any;
+    const load = async () => {
+      try {
+        const cfg = await view("get_config"); const all: ChainEvent[] = [];
+        for (let f = 0; f < cfg.events; f += 100) all.push(...(await view<ChainEvent[]>("list_events", { from: f, limit: 100 })));
+        if (live) setEvents(all.reverse());
+      } catch { /* RPC busy: try again shortly */ }
+      if (live) t = setTimeout(load, 15000);
+    };
+    load(); return () => { live = false; clearTimeout(t); };
+  }, []);
+  const ids = useMemo(() => new Set(vaults.map((v) => v.id)), [vaults]);
+  const list = useMemo(() => (events || []).filter((e) => ids.has(e.vault_id)), [events, ids]);
   const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const titleOf = (id: number) => vaults.find((v) => v.id === id)?.title || `Vault ${id}`;
+  if (!account) return (<><Top title="Activity" /><NeedWallet what="See what happened to your vaults: seals, check-ins, releases and claims." /></>);
   return (
     <>
-      <Top title="Activity" sub={`Public events from ${VAULT_CONTRACT}. Times in ${tzLabel()}.`}>
-        <div className="seg">{account && <button className={mine ? "on" : ""} onClick={() => { setMine(true); setPage(1); }}>My vaults</button>}<button className={!mine || !account ? "on" : ""} onClick={() => { setMine(false); setPage(1); }}>Everyone</button></div>
-      </Top>
+      <Top title="Activity" sub={`Everything that happened to your vaults, from NEAR. Times in ${tzLabel()}.`} />
       <div className="card card-pad">
-        {list.length === 0 ? <p className="muted">No events yet.</p> : <div className="list">{list.slice((page - 1) * PAGE, page * PAGE).map((e, i) => (
-          <div className="row" key={i}><div className="grow"><div className="t">{label(e.kind)} <span className="muted" style={{ fontWeight: 400 }}>· vault #{e.vault_id}</span></div><div className="s">{e.detail || "—"} · by <a className="link mono" href={`${EXPLORER}/address/${e.actor}`} target="_blank" rel="noreferrer">{short(e.actor, 14, 8)}</a></div></div><div className="muted" style={{ fontSize: 13, textAlign: "right" }}>{when(nsToMs(e.at_ns))}</div></div>))}</div>}
+        {events === null ? <p className="muted"><CircleNotch size={14} className="spin" /> Loading from NEAR…</p>
+        : list.length === 0 ? (
+          <div className="empty-state"><span className="icon-chip"><ClockCounterClockwise size={22} weight="duotone" /></span><h3>Nothing here yet</h3><p className="muted">When you seal a vault, check in, miss a deadline, or an heir opens what you left, it shows up here with the time and a link to the transaction record.</p></div>
+        ) : <div className="list">{list.slice((page - 1) * PAGE, page * PAGE).map((e, i) => {
+          const [l, I, tone] = EV[e.kind] || [e.kind, Info, "muted"];
+          return (<div className="row ev-row" key={i}><span className={`ev-ic tone-${tone}`}><I size={18} weight="duotone" /></span><div className="grow"><div className="t">{l} <span className="muted" style={{ fontWeight: 400 }}>· {titleOf(e.vault_id)}</span></div><div className="s">{when(nsToMs(e.at_ns))}{e.detail ? ` · ${e.detail}` : ""}{e.actor !== account ? (e.actor.endsWith(".testnet") ? " · by the keeper" : "") : " · by you"}</div></div></div>);
+        })}</div>}
         {pages > 1 && <div className="pager"><Pagination page={page} count={pages} onPageChange={setPage} aria-label="Activity pages" /></div>}
       </div>
     </>
