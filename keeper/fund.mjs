@@ -40,7 +40,7 @@ export async function privyUser(bearer) {
 export async function privyEmails(bearer) {
   const sub = await privyUser(bearer);
   if (!sub) return null;
-  const r = await fetch("https://auth.privy.io/api/v1/users/me", { headers: { authorization: `Bearer ${bearer}`, "privy-app-id": APP_ID, origin: process.env.APP_URL || "https://morrowseal-production.up.railway.app" }, signal: AbortSignal.timeout(8000) });
+  const r = await fetch("https://auth.privy.io/api/v1/users/me", { headers: { authorization: `Bearer ${bearer}`, "privy-app-id": APP_ID, origin: process.env.PRIVY_ORIGIN || "https://morrowseal-production.up.railway.app" }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) return null;
   const j = await r.json(); const u = j.user || j;
   if (u.id !== sub) return null;
