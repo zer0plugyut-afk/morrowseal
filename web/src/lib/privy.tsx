@@ -125,3 +125,14 @@ export async function callVault(method: string, args: object, { tgas = 50, depos
   if (sv) { try { value = JSON.parse(atob(sv)); } catch {} }
   return { hash: out?.transaction?.hash as string, value };
 }
+
+/** Deterministic per-user secret: an ed25519 signature (deterministic) by the user's own NEAR key over a
+ *  domain-separated hash. It never leaves the browser; used to encrypt synced device notes. */
+export async function metaSecret(): Promise<Uint8Array | null> {
+  const u = await currentUser();
+  if (!u?.account || !B.cur?.signRawHash) return null;
+  const msg = new TextEncoder().encode(`morrowseal/device-notes/v1/${u.account}`);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", msg));
+  const { signature } = await B.cur.signRawHash({ address: u.account, chainType: "near", hash: `0x${hex(digest)}` });
+  return unhex(signature);
+}

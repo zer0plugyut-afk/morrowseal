@@ -6,6 +6,7 @@ import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
 import { tick, relayClaim, relayReopen, relayOwnerOpen } from "./lib.mjs";
 import { fund, privyUser, privyEmails, privyNearAccounts } from "./fund.mjs";
+import { getMeta, putMeta } from "./meta.mjs";
 import { indexNamed, indexNotice, sharedWith, claimLink, record, keeperEvents } from "./heirs.mjs";
 import { fresh, ownerIds } from "./index-cache.mjs";
 import { namedEmail, sendMail } from "./email.mjs";
@@ -49,7 +50,7 @@ const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/htm
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   try {
-    if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, authorization", "access-control-allow-methods": "GET,POST" }); return res.end(); }
+    if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, authorization", "access-control-allow-methods": "GET,POST,PUT" }); return res.end(); }
     if (url.pathname === "/api/health") return json(res, 200, { ok: true, keeper: last, interval_ms: INTERVAL });
     if (url.pathname === "/api/ipfs" && req.method === "POST") {
       if (limited(req, 40)) return json(res, 429, { error: "slow down" });
@@ -148,6 +149,14 @@ http.createServer(async (req, res) => {
       const n = out.filter((x) => x === "sent").length;
       if (n) record("heirs_named", j.vault_id, n === 1 ? "1 heir told they were named" : `${n} heirs told they were named`);
       return json(res, 200, { results: out });
+    }
+    if (url.pathname === "/api/meta" && (req.method === "GET" || req.method === "PUT")) {
+      const sub = await privyUser((req.headers.authorization || "").replace(/^Bearer /, ""));
+      if (!sub) return json(res, 401, { error: "Please sign in again." });
+      if (limited(req, 60, "meta", sub)) return json(res, 429, { error: "slow down" });
+      if (req.method === "GET") return json(res, 200, getMeta(sub) || { blob: null, at: 0 });
+      const j = JSON.parse((await body(req, 128 * 1024)).toString());
+      try { return json(res, 200, { at: putMeta(sub, j.blob).at }); } catch { return json(res, 400, { error: "bad request" }); }
     }
     if (url.pathname === "/api/owner-open" && req.method === "POST") {
       // Keeper pays. Only the vault owner may ask; the enclave also checks the sealed owner email.

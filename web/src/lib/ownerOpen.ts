@@ -35,8 +35,7 @@ export async function ownerOpen(v: { id: number }) {
 
 function rememberHeirs(id: number, gift: any) {
   const heirs = Array.isArray(gift?.heirs) ? gift.heirs.map((h: any) => ({ name: String(h.name || ""), email: String(h.email || "") })) : [];
-  if (!heirs.length) return;
+  if (!heirs.length && !gift?.title) return;
   const cur = localVaults()[id];
-  saveLocal(id, { title: cur?.title || `Vault ${id}`, heirs, files: cur?.files?.length ? cur.files : (gift.files || []).map((f: any) => ({ name: f.name, size: f.size })), createdAt: cur?.createdAt || Date.now() });
-  window.dispatchEvent(new Event("ms-local"));
+  saveLocal(id, { title: cur?.title || (typeof gift?.title === "string" && gift.title) || `Vault ${id}`, heirs, files: cur?.files?.length ? cur.files : (gift.files || []).map((f: any) => ({ name: f.name, size: f.size })), createdAt: cur?.createdAt || Date.now() });
 }

@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Plus, Heartbeat, UsersThree, Files, ArrowSquareOut, XCircle, ArrowLeft, Clock } from "@phosphor-icons/react";
+import { Plus, Heartbeat, UsersThree, Files, ArrowSquareOut, XCircle, ArrowLeft, Clock, PencilSimple } from "@phosphor-icons/react";
 import { useToast, StatusBadge } from "@unlocalhosted/metalui";
 import { Persona } from "../components/Persona";
 import { Top, NeedWallet } from "../app/Shell";
@@ -9,6 +9,7 @@ import { VaultShelf } from "../components/VaultShelf";
 import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent } from "../lib/near";
 import { countdown, span, when, tzLabel, short } from "../lib/format";
 import { ownerOpen, friendly } from "../lib/ownerOpen";
+import { saveLocal } from "../lib/local";
 import { RevealHeirs, useLocalVaults } from "../components/RevealHeirs";
 import { fetchCid } from "../lib/api";
 import { OWNER_PREVIEW_FROM } from "@shared/morrowseal.mjs";
@@ -78,6 +79,12 @@ export function VaultDetail() {
     <>
       <Link to="/app" className="muted" style={{ display: "inline-flex", gap: 6, alignItems: "center", marginBottom: 14 }}><ArrowLeft size={16} /> All vaults</Link>
       <Top title={v.title} sub={`Vault #${v.id} · created ${when(nsToMs(v.created_ns))} (${tzLabel()})`}>
+        {!watch && <button className="btn btn-ghost btn-sm" onClick={() => {
+          const t = window.prompt("Vault title (kept off-chain, synced encrypted to your devices)", local?.title || v.title);
+          if (t == null || !t.trim()) return;
+          saveLocal(v.id, { title: t.trim().slice(0, 60), heirs: local?.heirs || [], files: local?.files || [], createdAt: local?.createdAt || Date.now() });
+          toast.show({ title: "Renamed", sub: t.trim().slice(0, 60), tone: "success" });
+        }}><PencilSimple size={16} /> Rename</button>}
         {v.status === "Active" && <button className="btn btn-brand btn-sm" onClick={() => act("check_in", "Checking in")}><Heartbeat size={16} weight="bold" /> I'm here</button>}
       </Top>
       <div className="grid-2">
