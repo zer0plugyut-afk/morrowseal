@@ -8,10 +8,10 @@ import { useApp } from "../app/state";
 import { VaultShelf } from "../components/VaultShelf";
 import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent } from "../lib/near";
 import { countdown, span, when, tzLabel, short } from "../lib/format";
-import { localVaults } from "../lib/local";
-import { identityToken } from "../lib/privy";
+import { ownerOpen, friendly } from "../lib/ownerOpen";
+import { RevealHeirs, useLocalVaults } from "../components/RevealHeirs";
 import { fetchCid } from "../lib/api";
-import { buildOwnerOpen, openGift, OWNER_PREVIEW_FROM } from "@shared/morrowseal.mjs";
+import { OWNER_PREVIEW_FROM } from "@shared/morrowseal.mjs";
 import { useNow } from "../components/ui";
 
 export default function Vaults() {
@@ -48,7 +48,7 @@ export default function Vaults() {
 export function VaultDetail() {
   const { id } = useParams();
   const vid = Number(id);
-  const { vaults, refresh, account } = useApp();
+  const { vaults, refresh, account, watch } = useApp();
   const toast = useToast();
   const now = useNow();
   const [events, setEvents] = useState<ChainEvent[]>([]);
@@ -56,7 +56,7 @@ export function VaultDetail() {
   const [slow, setSlow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setSlow(true), 8000); return () => clearTimeout(t); }, []);
   const v = vaults.find((x) => x.id === vid);
-  const local = localVaults()[vid];
+  const local = useLocalVaults()[vid];
   useEffect(() => {
     let live = true, t: any;
     const load = async () => {
@@ -86,7 +86,7 @@ export function VaultDetail() {
           <div style={{ fontFamily: "var(--font-display)", fontSize: 44, letterSpacing: "-.04em", margin: "16px 0 4px" }}>{v.status === "Active" ? (left > 0 ? countdown(left) : "Releasing…") : v.status === "Released" ? (v.claims.every(Boolean) ? "Opened" : "Claimable") : "Cancelled"}</div>
           <p className="muted">{v.status === "Active" ? `Releases on ${when(deadline(v))} (${tzLabel()}) unless you check in. You check in every ${span(v.interval_s)}${v.grace_s ? `, plus ${span(v.grace_s)} grace` : ""}.` : v.status === "Released" ? `Released ${when(nsToMs(v.released_ns!))}. ${v.mailed ? "Heirs were emailed." : "Emailing heirs…"}` : "Nothing will be sent."}</p>
           <dl className="kv" style={{ marginTop: 24 }}>
-            <dt>Heirs</dt><dd>{local?.heirs.length ? <span className="heir-chips">{local.heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Persona email={h.email} name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</span> : `${v.heirs} (names are only on the device that made it)`}</dd>
+            <dt>Heirs</dt><dd>{local?.heirs.length ? <span className="heir-chips">{local.heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Persona email={h.email} name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</span> : <span>{v.heirs} sealed {v.heirs === 1 ? "heir" : "heirs"}{!watch && <div style={{ marginTop: 6 }}><RevealHeirs v={v} /></div>}</span>}</dd>
             <dt>Files</dt><dd>{local?.files.map((f) => f.name).join(", ") || "Sealed"}</dd>
             <dt>Emails</dt><dd>{v.status === "Released" ? (v.mailed ? "Heirs have been emailed their link." : "Emailing heirs now…") : `Heirs were told they were named. Their link is emailed only if you miss a check-in (after ${span(v.interval_s + v.grace_s)} of silence).`}</dd>
             <dt>Check-ins</dt><dd>{v.checkins} · last {when(nsToMs(v.last_checkin_ns))}</dd>
@@ -112,16 +112,6 @@ export function VaultDetail() {
 
 export const label = (k: string) => ({ vault_created: "Vault sealed", checked_in: "Checked in", vault_updated: "Contents replaced", schedule_changed: "Schedule changed", vault_cancelled: "Cancelled", vault_released: "Deadline missed", heirs_notified: "Heirs notified", heir_email_sent: "Heirs emailed", heir_claimed: "Claimed" } as Record<string, string>)[k] || k;
 
-function friendly(e: any): string {
-  const m = String(e?.message || e).replace(/^Error: /, "");
-  if (/not the owner's email/i.test(m)) return "You're signed in with a different email than the one that sealed this vault.";
-  if (/sealed before this update|unavailable/i.test(m)) return "Preview isn't available for this older vault.";
-  if (/expired|sign in again/i.test(m)) return "Your sign-in expired. Sign in again and retry.";
-  if (/too many/i.test(m)) return "Too many tries. Wait a minute and try again.";
-  if (/NotEnoughBalance|balance/i.test(m)) return "The network fee couldn't be paid right now. Try again shortly.";
-  if (/^[\[{]/.test(m.trim()) || m.length > 160) return "The enclave couldn't open it right now. Try again in a moment.";
-  return m;
-}
 /** Owner preview: the enclave checks your sign-in email against the one sealed inside, then re-seals the key to this browser only. */
 function OwnerOpen({ v }: { v: any }) {
   const [st, setSt] = useState<"idle" | "busy" | "done">("idle");
@@ -132,13 +122,7 @@ function OwnerOpen({ v }: { v: any }) {
   const go = async () => {
     setSt("busy"); setErr("");
     try {
-      const tok = await identityToken();
-      if (!tok) throw new Error("Sign in again to open this vault.");
-      const req = buildOwnerOpen({ idToken: tok });
-      const r = await fetch("/api/owner-open", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${tok}` }, body: JSON.stringify({ vault_id: v.id, account: v.owner, request_hex: req.requestHex }) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.ok || !j.key_ct) throw new Error(j.error || "The enclave did not answer.");
-      setGift(await openGift(req.ephSk, j.key_ct, fetchCid)); setSt("done");
+      setGift(await ownerOpen(v)); setSt("done");
     } catch (e: any) { setErr(friendly(e)); setSt("idle"); }
   };
   if (st === "done" && gift) return (

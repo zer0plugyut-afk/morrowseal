@@ -178,4 +178,4 @@ Build and test the Rust parts:
 - "Shared with me" for still-waiting vaults relies on the seal-time hint the owner's browser sends; it is confirmed from the enclave's notice once released. Vaults sealed before this index existed appear only after release.
 - The first claim of each share is recorded on chain once. After that the heir can reopen it any number of times, on any device, by signing in with the named email (`heir_open`: the enclave re-checks the email and re-seals the key to that browser). Each reopen is a relayed TEE call paid by the keeper.
 - Privy holds users' NEAR keys; the enclave trusts Privy's verified-email answer.
-- Vault titles live in the owner's browser; another device shows "Vault N".
+- Vault titles live in the owner's browser; another device shows "Vault N". Heir names and emails can be restored on any device with **Show heir details** (owner-verified enclave open, vaults #7+), and are then kept only in that device's storage.

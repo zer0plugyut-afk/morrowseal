@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple, LockKey, PencilSimple, Clock, Warning, Bell, EnvelopeSimple, LockKeyOpen, XCircle, Info, CircleNotch, ClockCounterClockwise, HandHeart } from "@phosphor-icons/react";
 import { Pagination, useToast } from "@unlocalhosted/metalui";
 import { Persona } from "../components/Persona";
+import { RevealHeirs, useLocalVaults } from "../components/RevealHeirs";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent, type Vault } from "../lib/near";
@@ -14,19 +15,19 @@ import { label } from "./Vaults";
 import { VAULT_CONTRACT, OUTLAYER_PROJECT, ENCLAVE_PUBKEY } from "@shared/morrowseal.mjs";
 
 export function Heirs() {
-  const { account, vaults } = useApp();
-  const local = localVaults();
+  const { account, vaults, watch } = useApp();
+  const local = useLocalVaults();
   if (!account) return (<><Top title="Heirs" /><NeedWallet what="See who you've named in each vault." /></>);
   const rows = vaults.filter((v) => v.status !== "Cancelled").flatMap((v) => Array.from({ length: v.heirs }, (_, i) => ({ v, i, h: local[v.id]?.heirs[i] })));
   return (
     <>
-      <Top title="Heirs" sub="Names and emails are only on this device and inside the sealed vault. NEAR sees a count." />
+      <Top title="Heirs" sub="Names and emails live inside the sealed vault and on your devices, never on NEAR (it sees a count). On a new device, use Show heir details." />
       <div className="card card-pad">
         {rows.length === 0 ? <div className="empty"><UsersThree size={30} /><h3>No heirs yet</h3><p>Name heirs when you create a vault.</p><Link className="btn btn-dark" to="/app/create">Create a vault</Link></div> :
           <div className="list">{rows.map(({ v, i, h }) => (
             <div className="row" key={`${v.id}-${i}`}>
               <span style={{ flexShrink: 0 }}><Persona email={h?.email} name={h?.name || `Heir ${i + 1}`} /></span>
-              <div className="grow"><div className="t" title={h?.name}>{h?.name || `Heir ${i + 1}`}</div><div className="s" title={h?.email}>{h?.email || "Sealed (created on another device)"} · {v.title}</div></div>
+              <div className="grow"><div className="t" title={h?.name}>{h?.name || `Heir ${i + 1}`}</div><div className="s" title={h?.email}>{h?.email || "Sealed in the vault"} · {v.title}</div>{!h && i === 0 && !watch && <div style={{ marginTop: 6 }}><RevealHeirs v={v} /></div>}</div>
               <span className={`chip ${v.claims[i] ? "chip-green" : v.status === "Released" ? "chip-amber" : "chip-blue"}`}>{v.claims[i] ? "Opened" : v.status === "Released" ? "Emailed" : "Sealed"}</span>
             </div>))}</div>}
       </div>
