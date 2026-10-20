@@ -403,3 +403,7 @@ dd .heir-chips { justify-content: flex-start; }
 [data-theme="light"] .mu-pagination .mu-icon-trigger svg { color: #1a1615 !important; fill: currentColor; opacity: 1; }
 [data-theme="light"] .mu-pagination .mu-icon-trigger:disabled svg { opacity: .35; }
 [data-theme="light"] .mu-pagination .mu-pagination-gap { color: #757170 !important; }
+.skel-card { display: grid; gap: 12px; min-height: 120px; align-content: center; }
+.skel-line { display: block; height: 14px; border-radius: 8px; background: linear-gradient(90deg, rgba(127,127,127,.12), rgba(127,127,127,.24), rgba(127,127,127,.12)); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+.skel-line.short { width: 55%; }
+@keyframes skel { to { background-position: -200% 0; } }

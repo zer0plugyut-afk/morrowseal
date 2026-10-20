@@ -20,7 +20,7 @@ export const NAV = [
 ];
 
 export default function Shell() {
-  const { account, login, logout, vaults, watch, email } = useApp();
+  const { account, login, logout, vaults, watch, email, ready } = useApp();
   const loc = useLocation();
   const overdue = vaults.filter((v) => v.status === "Active").length;
   return (
@@ -34,7 +34,7 @@ export default function Shell() {
         ))}
         <div className="side-foot">
           <div style={{ display: "flex", gap: 8 }}><ThemeToggle /></div>
-          {account ? (
+          {!ready ? <span className="skel-line" style={{ width: 120, height: 34 }} /> : account ? (
             <AccountCard account={account} email={watch ? null : email} watch={watch} onLogout={logout} />
           ) : (
             <button className="btn btn-dark btn-sm" onClick={login}><EnvelopeSimple size={16} /> Sign in</button>
@@ -61,7 +61,8 @@ export function Top({ title, sub, children }: { title: string; sub?: string; chi
 }
 
 export function NeedWallet({ what }: { what: string }) {
-  const { login } = useApp();
+  const { login, ready } = useApp();
+  if (!ready) return <div className="card card-pad skel-card" aria-busy="true"><span className="skel-line" /><span className="skel-line short" /></div>;
   return (
     <div className="card empty">
       <span className="icon-chip" style={{ margin: "0 auto" }}><EnvelopeSimple size={22} weight="duotone" /></span>

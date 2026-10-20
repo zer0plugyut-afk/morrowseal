@@ -35,7 +35,8 @@ export default function Claim() {
     load(); return () => { live = false; clearTimeout(t); };
   }, [vid]);
   useEffect(() => { (async () => { const saved = localStorage.getItem(slot); const v = vault; if (saved && v?.claims[hi]) { setPhase("open"); await open(JSON.parse(saved).sk, v.claims[hi]!.key_ct); } })(); }, [vault?.id]);
-  useEffect(() => { currentUser().then((s) => s?.email && setHeirEmail(s.email)); }, []);
+  const [checked, setChecked] = useState(false);
+  useEffect(() => { currentUser().then((s) => s?.email && setHeirEmail(s.email)).finally(() => setChecked(true)); }, []);
 
   async function open(sk: string, keyCt: string) {
     try { const g = await openGift(sk, keyCt, fetchCid); setGift(g); setPhase("done"); } catch (e: any) { setErr("Your browser could not open the files: " + (e?.message || e)); setPhase("idle"); }
@@ -128,7 +129,7 @@ export default function Claim() {
           <p>Someone close to you set up a private vault and named you. Sign in with the email this link was sent to, and it opens right here in your browser.</p>
           {!heirEmail ? (
             <div className="claim-actions">
-              {authConfigured() ? <button className="btn btn-dark btn-lg" disabled={busy} onClick={signInOnly}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} Sign in to open</button> : <p>Sign-in is being set up. Try again shortly.</p>}
+              {!checked ? <CircleNotch size={22} className="spin" /> : authConfigured() ? <button className="btn btn-dark btn-lg" disabled={busy} onClick={signInOnly}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} Sign in to open</button> : <p>Sign-in is being set up. Try again shortly.</p>}
               <p style={{ fontSize: 13.5 }}>Use the email this link was sent to. Email code or Google both work.</p>
             </div>
           ) : missing ? (

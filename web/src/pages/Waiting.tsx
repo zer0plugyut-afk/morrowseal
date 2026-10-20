@@ -15,7 +15,8 @@ export default function Waiting() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   useEffect(() => { const load = () => view<Vault>("get_vault", { vault_id: vid }).then(setVault).catch(() => {}); load(); const t = setInterval(load, 20000); return () => clearInterval(t); }, [vid]);
-  useEffect(() => { currentUser().then((u) => u?.email && setEmail(u.email)); }, []);
+  const [checked, setChecked] = useState(false);
+  useEffect(() => { currentUser().then((u) => u?.email && setEmail(u.email)).finally(() => setChecked(true)); }, []);
   const login = async () => { setErr(""); setBusy(true); try { const u = await signIn(); setEmail(u.email); } catch (e: any) { setErr(String(e?.message || e)); } finally { setBusy(false); } };
   const released = vault?.status === "Released";
   return (
@@ -30,7 +31,7 @@ export default function Waiting() {
         </div>
         <div className="claim-actions">
           {email ? <div className="banner" style={{ textAlign: "left" }}><CheckCircle size={20} weight="fill" color="#0ea158" /> <div>You're signed in as <b className="ellipsis" style={{ display: "inline" }} title={email}>{email}</b>. If this is the address that got the email, you're all set.</div></div>
-            : authConfigured() && <button className="btn btn-dark btn-lg" disabled={busy} onClick={login}>{busy ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} Sign in to check</button>}
+            : checked && authConfigured() && <button className="btn btn-dark btn-lg" disabled={busy} onClick={login}>{busy ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} Sign in to check</button>}
           {err && <div className="banner warn" style={{ textAlign: "left" }}><Info size={20} /> {err}</div>}
         </div>
         <p style={{ fontSize: 12.5, marginTop: 24 }}>No wallet or crypto needed. Signing in only confirms your email; nothing is opened until the vault is released.</p>

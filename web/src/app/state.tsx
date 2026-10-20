@@ -30,7 +30,14 @@ export function AppState({ children }: { children: ReactNode }) {
   useEffect(() => {
     const w = new URLSearchParams(location.search).get("watch") || sessionStorage.getItem("ms-watch");
     if (w && /^[a-z0-9._-]{2,64}$/.test(w)) { sessionStorage.setItem("ms-watch", w); setAccount(w); setWatch(true); setReady(true); return; }
-    const sync = () => currentUser().then(async (u) => { setEmail(u?.email ?? null); setAccount(u?.account ?? null); setReady(true); if (u) { const a = await ensureAccount(); if (a) setAccount(a); } });
+    // Not "ready" until Privy is ready and, for a signed-in user, the NEAR account has hydrated,
+    // so a refresh never flashes the sign-in prompt for someone already logged in.
+    const sync = () => currentUser().then(async (u) => {
+      setEmail(u?.email ?? null);
+      if (u && !u.account) { const a = await ensureAccount().catch(() => null); setAccount(a ?? null); } else setAccount(u?.account ?? null);
+      setReady(true);
+      if (u?.account) ensureAccount().then((a) => { if (a) setAccount(a); }).catch(() => {});
+    }).catch(() => setReady(true));
     sync(); return onAuthChange(() => { if (!sessionStorage.getItem("ms-watch")) sync(); });
   }, []);
   // Pull encrypted device notes once per signed-in account (and push anything only this device has).
