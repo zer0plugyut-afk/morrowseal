@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { view, type Vault } from "../lib/near";
-import { currentUser, onAuthChange, signIn, signOut } from "../lib/privy";
+import { currentUser, ensureAccount, onAuthChange, signIn, signOut } from "../lib/privy";
 import { localVaults } from "../lib/local";
 import type { ShelfVault } from "../components/VaultShelf";
 
@@ -29,7 +29,7 @@ export function AppState({ children }: { children: ReactNode }) {
   useEffect(() => {
     const w = new URLSearchParams(location.search).get("watch") || sessionStorage.getItem("ms-watch");
     if (w && /^[a-z0-9._-]{2,64}$/.test(w)) { sessionStorage.setItem("ms-watch", w); setAccount(w); setWatch(true); setReady(true); return; }
-    const sync = () => currentUser().then((u) => { setAccount(u?.account ?? null); setEmail(u?.email ?? null); setReady(true); });
+    const sync = () => currentUser().then(async (u) => { setEmail(u?.email ?? null); setAccount(u?.account ?? null); setReady(true); if (u) { const a = await ensureAccount(); if (a) setAccount(a); } });
     sync(); return onAuthChange(() => { if (!sessionStorage.getItem("ms-watch")) sync(); });
   }, []);
   useEffect(() => { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); }, [refresh]);

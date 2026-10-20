@@ -69,6 +69,18 @@ export async function signIn(): Promise<{ email: string | null; account: string 
   await ensureFunded(account);
   return { email: B.cur!.user?.email?.address ?? B.cur!.user?.google?.email ?? null, account };
 }
+// Make sure a signed-in user has a NEAR account and it is funded (covers sessions restored on load).
+export async function ensureAccount(): Promise<string | null> {
+  const u = await currentUser();
+  if (!u) return null;
+  let account = u.account;
+  if (!account) account = (await B.cur!.createWallet({ chainType: "near" })).wallet.address as string;
+  try { await ensureFunded(account); } catch {}
+  return account;
+}
+export async function balanceOf(account: string): Promise<bigint | null> {
+  try { const r = await rpc("query", { request_type: "view_account", finality: "final", account_id: account }); return BigInt(r.amount); } catch { return 0n; }
+}
 export async function signOut() { try { await B.cur?.logout(); } catch {} }
 
 // The enclave verifies this Privy access token and asks Privy which email it belongs to.

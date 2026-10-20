@@ -330,3 +330,15 @@ p { margin: 0; }
   .stepper.rail li:first-child.current .lbl { left: 0; } .stepper.rail li:last-child.current .lbl { right: 0; }
 }
 .page-form { max-width: 720px; margin: 0 auto; }
+
+.acct-card { display: grid; gap: 6px; padding: 8px; border-radius: 16px; background: var(--surface-alt); min-width: 0; }
+.acct-card .acct { background: none; padding: 4px 2px 6px; min-width: 0; }
+.acct-id { min-width: 0; flex: 1; overflow: hidden; }
+.acct-k { font-size: 11px; }
+.acct-card .who { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 13px; }
+.acct-row { display: flex; align-items: center; gap: 6px; justify-content: space-between; padding: 6px 8px; border-radius: 10px; background: var(--bg); font-size: 12.5px; min-width: 0; }
+.acct-addr { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.acct-bal { font-size: 12px; }
+.acct-btn { width: 28px !important; height: 28px !important; flex: none; display: inline-grid; place-items: center; }
+.acct-hint { font-size: 12px; color: var(--brand); line-height: 1.4; padding: 2px 6px; }
+.side-foot { min-width: 0; }

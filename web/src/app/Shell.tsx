@@ -1,8 +1,11 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, SignOut, EnvelopeSimple } from "@phosphor-icons/react";
+import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, SignOut, EnvelopeSimple, Copy, ArrowSquareOut } from "@phosphor-icons/react";
 import { Logo, ThemeToggle } from "../components/ui";
 import { useApp } from "./state";
 import { short } from "../lib/format";
+import { useEffect, useState } from "react";
+import { useToast } from "@unlocalhosted/metalui";
+import { balanceOf } from "../lib/privy";
 
 export const NAV = [
   { to: "/app", icon: Vault, label: "Vaults", end: true },
@@ -30,7 +33,7 @@ export default function Shell() {
         <div className="side-foot">
           <div style={{ display: "flex", gap: 8 }}><ThemeToggle /></div>
           {account ? (
-            <div className="acct"><span className="dot" /><div style={{ minWidth: 0, flex: 1 }}><div className="muted" style={{ fontSize: 11 }}>{watch ? "Viewing read-only" : "Signed in · testnet"}</div><div className="who mono" title={account}>{email && !watch ? email : short(account, 14, 8)}</div></div><button className="icon-btn" style={{ width: 32, height: 32 }} onClick={logout} aria-label="Sign out"><SignOut size={16} /></button></div>
+            <AccountCard account={account} email={watch ? null : email} watch={watch} onLogout={logout} />
           ) : (
             <button className="btn btn-dark btn-sm" onClick={login}><EnvelopeSimple size={16} /> Sign in</button>
           )}
@@ -63,6 +66,40 @@ export function NeedWallet({ what }: { what: string }) {
       <h3>Sign in with your email</h3>
       <p>{what} We send a one-time code. Your NEAR testnet account is created for you, no wallet or seed phrase.</p>
       <button className="btn btn-dark" onClick={login}>Sign in with email</button>
+    </div>
+  );
+}
+
+function AccountCard({ account, email, watch, onLogout }: { account: string; email: string | null; watch: boolean; onLogout: () => void }) {
+  const toast = useToast();
+  const [bal, setBal] = useState<bigint | null>(null);
+  useEffect(() => {
+    let live = true;
+    const load = () => balanceOf(account).then((b) => live && setBal(b));
+    load(); const t = setInterval(load, 20000);
+    return () => { live = false; clearInterval(t); };
+  }, [account]);
+  const near = bal === null ? "…" : (Number(bal / 10n ** 20n) / 10000).toLocaleString(undefined, { maximumFractionDigits: 4 });
+  const copy = async () => { try { await navigator.clipboard.writeText(account); toast.show({ title: "Address copied", sub: short(account, 10, 6), tone: "success" }); } catch { toast.show({ title: "Copy failed", tone: "error" }); } };
+  return (
+    <div className="acct-card">
+      <div className="acct">
+        <span className="dot" />
+        <div className="acct-id">
+          <div className="muted acct-k">{watch ? "Viewing read-only" : "Signed in · testnet"}</div>
+          <div className="who" title={email || account}>{email || short(account, 10, 6)}</div>
+        </div>
+        {!watch && <button className="icon-btn acct-btn" onClick={onLogout} aria-label="Sign out" title="Sign out"><SignOut size={16} /></button>}
+      </div>
+      <div className="acct-row">
+        <span className="mono acct-addr" title={account}>{short(account, 8, 6)}</span>
+        <button className="icon-btn acct-btn" onClick={copy} aria-label="Copy address" title="Copy address"><Copy size={14} /></button>
+        <a className="icon-btn acct-btn" href={`https://testnet.nearblocks.io/address/${account}`} target="_blank" rel="noreferrer" aria-label="View on NearBlocks" title="View on NearBlocks"><ArrowSquareOut size={14} /></a>
+      </div>
+      <div className="acct-row">
+        <span className="muted">Balance</span><b className="mono acct-bal">{near} NEAR</b>
+      </div>
+      {bal === 0n && !watch && <a className="acct-hint" href="https://near-faucet.io/" target="_blank" rel="noreferrer">Balance is 0. Setting up your account; if it stays at 0, get test NEAR from the faucet ↗</a>}
     </div>
   );
 }
