@@ -1,9 +1,9 @@
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY web/package.json web/package-lock.json web/
-RUN cd web && npm ci
+RUN cd web && npm install --no-audit --no-fund
 COPY shared shared
 COPY keeper keeper
 COPY web web
