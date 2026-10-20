@@ -1,0 +1,18 @@
+{
+  "name": "morrowseal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Private inheritance vault on NEAR: files sealed in a TEE, released to heirs when the owner stops checking in.",
+  "scripts": {
+    "keeper": "node keeper/index.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build"
+  },
+  "dependencies": {
+    "eciesjs": "^0.5.0",
+    "near-api-js": "^5.1.1"
+  }
+}

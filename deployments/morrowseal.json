@@ -1,0 +1,16 @@
+{
+  "network": "testnet",
+  "contract": "morrowseal-vault.testnet",
+  "ops": "morrowseal-ops.testnet",
+  "demo_owner": "morrowseal-demo.testnet",
+  "outlayer_project": "morrowseal-ops.testnet/morrowseal",
+  "enclave_wasm_sha256": "9b1d03ac3a895ee7b4f4738493c422dea0cf2bac386c7806999ca17ba5f211a1",
+  "enclave_pubkey": "02c2a3119b44700420af138a0918682a074a162e7a10200c4234b5da8383cd6977",
+  "txs": {
+    "contract_redeploy": "Deg7HhHph42GAVSgNrzVRRKSwzqSFiqm1wjaiPFGZoXd",
+    "enclave_pubkey_run": "6oHYq47KwEUkEJS721RDfL3pDvXo8ziCKD3RdgxEoJqd",
+    "vault1": {"create": "4C7CcMBR82LXj585BieeRdQzDRfrjvQnamQbvxGyxnEN", "release": "EEVnaWaPMHZtM3Y4Fhw5vXdzHa84M8V6ucZ3Sd53qHgo", "notify": "ELWBaSncLhcjCn359grCjASmNPtVVrA1n3pSiGfyp842", "claim": "5kM5RxxthNLXHR8S7A54GbKWSZEW7po3z4XkYvpUiAUG"},
+    "vault3": {"create": "E5aQkuwh6U2WFgRXmxwanHYrZ1LW6noknbr3wDHi7JG6", "release": "5Nuo5p1Yc7cMtQkFm5Qfo1MA5GNxcvUEivsETr34Eoci", "notify": "4JsjbJftCh7FjXRGbtp3JpxaQuxLZTnY7ua9viSG1Zg1", "email_claim": "D2kY9gjmanz9fj9mUquN2TtvBC7w7Vs5UVHUMr7DTN2g"},
+    "vault4_ui_e2e": {"create": "hF6N7xnnR1kHuEi9QXHABs1ammntiFiwmr7ikNNFMdF", "notify": "RfAbRe9PTifqregrVeXwKTHVXZ81KkTvKutGNyvpkJb", "email_claim": "A1bYjcGvEdcMtMFaVyAZZJuKVAKEdB3HASeReeZKuMxm"}
+  }
+}

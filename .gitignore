@@ -1,0 +1,10 @@
+node_modules/
+**/target/
+web/dist/
+.env*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+data/
+.DS_Store

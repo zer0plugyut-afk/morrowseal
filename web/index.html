@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Morrowseal — a private vault for the people you love</title>
+    <meta name="description" content="Seal files and words for the people you love. The key lives in a secure enclave on NEAR and is released only when you stop checking in." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/OpenRunde-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      try { var t = localStorage.getItem("ms-theme"); var d = t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; document.documentElement.dataset.theme = d ? "dark" : "light"; } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

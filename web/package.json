@@ -1,0 +1,32 @@
+{
+  "name": "morrowseal-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite --port 3000 --strictPort",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 3000"
+  },
+  "dependencies": {
+    "@fast-auth-near/browser-sdk": "^1.4.2",
+    "@fast-auth-near/javascript-provider": "^1.4.1",
+    "@hot-labs/near-connect": "^0.11.4",
+    "@phosphor-icons/react": "^2.1.10",
+    "@unlocalhosted/metalui": "^0.4.1",
+    "buffer": "^6.0.3",
+    "eciesjs": "^0.5.0",
+    "near-api-js": "^5.1.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

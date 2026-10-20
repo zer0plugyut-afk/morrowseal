@@ -1,0 +1,33 @@
+[package]
+name = "morrowseal-enclave"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Morrowseal release engine: holds the vault key inside an OutLayer TDX worker and hands it only to a named heir after the owner stops checking in."
+
+[[bin]]
+name = "morrowseal-enclave"
+path = "src/main.rs"
+
+[features]
+default = ["wasi"]
+wasi = ["wasi-http-client"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+hmac = "0.12"
+hkdf = "0.12"
+hex = "0.4"
+base64 = "0.22"
+rsa = { version = "0.9", default-features = false, features = ["sha2", "std"] }
+ecies = { version = "0.2", default-features = false, features = ["pure", "std"] }
+libsecp256k1 = "0.7"
+wasi-http-client = { version = "0.2", optional = true }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
