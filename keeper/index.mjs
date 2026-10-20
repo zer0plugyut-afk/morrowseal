@@ -33,12 +33,15 @@ async function loop() {
 if (process.env.KEEPER_LOOP !== "0") loop();
 
 const hits = new Map();
-function limited(req, max = 30) {
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
-  const now = Date.now(), w = hits.get(ip)?.filter((t) => now - t < 60000) || [];
-  w.push(now); hits.set(ip, w);
+// Per-endpoint buckets (one shared window used to make busy pages exhaust the strict limits).
+// Railway terminates TLS at its proxy; the first x-forwarded-for entry is the client.
+const clientIp = (req) => String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress;
+function limited(req, max = 30, bucket = new URL(req.url, "http://x").pathname, key = clientIp(req)) {
+  const k = `${bucket}|${key}`, now = Date.now(), w = hits.get(k)?.filter((t) => now - t < 60000) || [];
+  w.push(now); hits.set(k, w);
   return w.length > max;
 }
+setInterval(() => { const now = Date.now(); for (const [k, w] of hits) if (!w.some((t) => now - t < 60000)) hits.delete(k); }, 300000).unref();
 const body = (req, max) => new Promise((res, rej) => { const c = []; let n = 0; req.on("data", (d) => { n += d.length; if (n > max) { rej(new Error("too large")); req.destroy(); } else c.push(d); }); req.on("end", () => res(Buffer.concat(c))); req.on("error", rej); });
 const json = (res, code, obj) => { res.writeHead(code, { "content-type": "application/json", "access-control-allow-origin": "*" }); res.end(JSON.stringify(obj)); };
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2", ".json": "application/json", ".webp": "image/webp", ".ico": "image/x-icon" };
@@ -147,10 +150,14 @@ http.createServer(async (req, res) => {
       return json(res, 200, { results: out });
     }
     if (url.pathname === "/api/reopen" && req.method === "POST") {
-      if (limited(req, 6)) return json(res, 429, { error: "Too many attempts, wait a minute." });
+      // Verify first; only verified requests count toward the limit, keyed on the Privy user.
+      const sub = await privyUser((req.headers.authorization || "").replace(/^Bearer /, ""));
+      if (!sub) return json(res, 401, { error: "Please sign in again." });
       const j = JSON.parse((await body(req, 64 * 1024)).toString());
       if (!Number.isInteger(j.vault_id) || !Number.isInteger(j.heir_index) || !/^[0-9a-f]+$/i.test(j.request_hex || "")) return json(res, 400, { error: "bad request" });
+      if (limited(req, 10, "reopen", sub)) return json(res, 429, { error: "Too many attempts, wait a minute." });
       const r = await relayReopen(ops, j);
+      if (!r) return json(res, 409, { error: "Already opening, one moment." });
       return json(res, r.ok ? 200 : 422, r);
     }
     if (url.pathname === "/api/claim" && req.method === "POST") {

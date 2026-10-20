@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EnvelopeSimple, LockKeyOpen, DownloadSimple, FileText, CheckCircle, CircleNotch, ArrowSquareOut, Info } from "@phosphor-icons/react";
 import { Folder, useToast } from "@unlocalhosted/metalui";
@@ -77,7 +77,10 @@ export default function Claim() {
 
   // Reopen on any device: the enclave re-checks the signed-in email against the sealed heir email
   // and re-seals the key to a fresh one-time key in this browser. The first claim stays recorded.
+  const reopening = useRef(false);
   async function reopen() {
+    if (reopening.current) return;
+    reopening.current = true;
     setErr("");
     try {
       setPhase("auth");
@@ -87,7 +90,7 @@ export default function Claim() {
       if (!idToken) throw new Error("Sign-in did not finish. Try again.");
       setPhase("claim");
       const req = buildOwnerOpen({ idToken });
-      const r = await fetch("/api/reopen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ vault_id: vid, heir_index: hi, request_hex: req.requestHex }) });
+      const r = await fetch("/api/reopen", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${idToken}` }, body: JSON.stringify({ vault_id: vid, heir_index: hi, request_hex: req.requestHex }) });
       const j = await r.json().catch(() => ({}));
       if (j.tx) setTx(j.tx);
       if (!r.ok || !j.ok || !j.key_ct) throw new Error(j.error || "The enclave refused to reopen it.");
@@ -97,10 +100,11 @@ export default function Claim() {
       setPhase("idle");
       const m = String(e?.message || e).replace(/^Error: /, "");
       setErr(/not the heir's email/i.test(m) ? "WRONG_EMAIL" : m);
-    }
+    } finally { reopening.current = false; }
   }
+  const autoFired = useRef(false);
   const wantReopen = useMemo(() => new URLSearchParams(location.hash.slice(1)).get("reopen") === "1", []);
-  useEffect(() => { if (wantReopen && heirEmail && vault?.claims[hi] && !localStorage.getItem(slot) && phase === "idle" && !gift && !err) reopen(); }, [wantReopen, heirEmail, vault?.id]);
+  useEffect(() => { if (wantReopen && !autoFired.current && heirEmail && vault?.claims[hi] && !localStorage.getItem(slot) && phase === "idle" && !gift && !err) { autoFired.current = true; history.replaceState(null, "", location.pathname); reopen(); } }, [wantReopen, heirEmail, vault?.id]);
 
   const download = (f: Gift["files"][number]) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([f.bytes as any], { type: f.type })); a.download = f.name; a.click(); };
   const claimed = vault?.claims[hi];

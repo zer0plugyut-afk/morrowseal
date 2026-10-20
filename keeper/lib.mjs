@@ -78,6 +78,7 @@ export async function relayClaim(ops, { vault_id, heir_index, claim_hex }) {
 
 /** Relay an heir reopen (any device). The enclave checks the sealed Privy token; nothing is stored. */
 export async function relayReopen(ops, { vault_id, heir_index, request_hex }) {
+  return once(`o${vault_id}:${heir_index}:${request_hex.slice(0, 16)}`, async () => {
   const v = await view(VAULT_CONTRACT, "get_vault", { vault_id });
   if (!v || v.status !== "Released") throw new Error("This vault has not been released.");
   if (!v.claims[heir_index]) throw new Error("Open it from your email link first.");
@@ -86,4 +87,5 @@ export async function relayReopen(ops, { vault_id, heir_index, request_hex }) {
   const r = lastValue(o);
   log("heir_open", vault_id, heir_index, o.transaction.hash, r?.ok);
   return { tx: o.transaction.hash, ok: r?.ok === true, key_ct: r?.key_ct || null, error: r?.error || null };
+  });
 }
