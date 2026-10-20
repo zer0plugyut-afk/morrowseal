@@ -212,6 +212,28 @@ impl Morrowseal {
         self.tee(input).then(Self::ext(env::current_account_id()).with_static_gas(CALLBACK_GAS).on_claim(vault_id, heir_index, digest))
     }
 
+    /// Owner preview: the enclave checks the owner's sign-in email against the one sealed inside
+    /// the vault and re-seals the key to the owner's one-time browser key. Nothing is stored.
+    #[payable]
+    pub fn owner_open(&mut self, vault_id: u64, ciphertext_hex: String, request_hex: String) -> Promise {
+        require!(env::attached_deposit() >= MIN_TEE_DEPOSIT, "attach >= 0.02 NEAR for OutLayer");
+        let digest = hex::encode(env::sha256(&hex::decode(ciphertext_hex.trim_start_matches("0x")).expect("hex")));
+        let v = self.vaults.get(&vault_id).expect("no vault");
+        require!(digest == v.commitment, "ciphertext does not match commitment");
+        require!(v.status != Status::Cancelled, "vault cancelled");
+        let input = json!({"action":"owner_open","vault_id":vault_id,"ciphertext_hex":ciphertext_hex.trim_start_matches("0x"),"claim_hex":request_hex.trim_start_matches("0x")});
+        self.tee(input).then(Self::ext(env::current_account_id()).with_static_gas(CALLBACK_GAS).on_owner_open(digest))
+    }
+
+    #[private]
+    pub fn on_owner_open(&mut self, commitment: String, #[callback_result] result: Result<Option<serde_json::Value>, PromiseError>) -> serde_json::Value {
+        match Self::tee_result(result) {
+            Ok(r) if r["commitment"].as_str() == Some(commitment.as_str()) => json!({"ok":true,"key_ct":r["key_ct"]}),
+            Ok(_) => json!({"ok":false,"error":"stale result"}),
+            Err(e) => json!({"ok":false,"error":e}),
+        }
+    }
+
     fn tee(&self, input: serde_json::Value) -> Promise {
         ext_outlayer::ext(self.outlayer.clone())
             .with_attached_deposit(env::attached_deposit())

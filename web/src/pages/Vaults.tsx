@@ -8,6 +8,9 @@ import { VaultShelf } from "../components/VaultShelf";
 import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent } from "../lib/near";
 import { countdown, span, when, tzLabel, short } from "../lib/format";
 import { localVaults } from "../lib/local";
+import { identityToken } from "../lib/privy";
+import { fetchCid } from "../lib/api";
+import { buildOwnerOpen, openGift, OWNER_PREVIEW_FROM } from "@shared/morrowseal.mjs";
 import { useNow } from "../components/ui";
 
 export default function Vaults() {
@@ -87,6 +90,7 @@ export function VaultDetail() {
             <dt>Emails</dt><dd>{v.status === "Released" ? (v.mailed ? "Heirs have been emailed their link." : "Emailing heirs now…") : `Heirs were told they were named. Their link is emailed only if you miss a check-in (after ${span(v.interval_s + v.grace_s)} of silence).`}</dd>
             <dt>Check-ins</dt><dd>{v.checkins} · last {when(nsToMs(v.last_checkin_ns))}</dd>
             <dt>Commitment</dt><dd className="mono">{short(v.commitment, 12, 10)}</dd>
+            <dt>Preview</dt><dd><OwnerOpen v={v} /></dd>
             <dt>Sealed blob</dt><dd><a className="link mono" href={`/api/ipfs/${v.cid}`} target="_blank" rel="noreferrer">{short(v.cid, 12, 8)} <ArrowSquareOut size={12} /></a></dd>
           </dl>
           {v.status === "Released" && (
@@ -106,3 +110,32 @@ export function VaultDetail() {
 }
 
 export const label = (k: string) => ({ vault_created: "Vault sealed", checked_in: "Checked in", vault_updated: "Contents replaced", schedule_changed: "Schedule changed", vault_cancelled: "Cancelled", vault_released: "Deadline missed", heirs_notified: "Heirs notified", heir_email_sent: "Heirs emailed", heir_claimed: "Claimed" } as Record<string, string>)[k] || k;
+
+/** Owner preview: the enclave checks your sign-in email against the one sealed inside, then re-seals the key to this browser only. */
+function OwnerOpen({ v }: { v: any }) {
+  const [st, setSt] = useState<"idle" | "busy" | "done">("idle");
+  const [err, setErr] = useState("");
+  const [gift, setGift] = useState<any>(null);
+  if (v.id < OWNER_PREVIEW_FROM) return <span className="muted">Owner preview unavailable for vaults sealed before this update</span>;
+  if (v.status === "Cancelled") return <span className="muted">Cancelled</span>;
+  const go = async () => {
+    setSt("busy"); setErr("");
+    try {
+      const ct = await fetchCid(v.cid);
+      const ctHex = Array.from(ct, (b) => b.toString(16).padStart(2, "0")).join("");
+      const tok = await identityToken();
+      if (!tok) throw new Error("Sign in again to open this vault");
+      const req = buildOwnerOpen({ idToken: tok });
+      const r = await callVault("owner_open", { vault_id: v.id, ciphertext_hex: ctHex, request_hex: req.requestHex }, { tgas: 300, deposit: "20000000000000000000000" });
+      if (!r.value?.ok) throw new Error(r.value?.error || "The enclave did not answer");
+      setGift(await openGift(req.ephSk, r.value.key_ct, fetchCid)); setSt("done");
+    } catch (e: any) { setErr(String(e?.message || e).slice(0, 160)); setSt("idle"); }
+  };
+  if (st === "done" && gift) return (
+    <div className="owner-preview">
+      {gift.message && <p style={{ whiteSpace: "pre-wrap", marginBottom: 8 }}>{gift.message}</p>}
+      {gift.files.map((f: any, i: number) => <div key={i}><a className="link ellipsis" download={f.name} href={URL.createObjectURL(new Blob([f.bytes], { type: f.type }))}>{f.name}</a></div>)}
+      <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>Decrypted in this browser only.</p>
+    </div>);
+  return <span><button className="btn btn-sm" disabled={st === "busy"} onClick={go}>{st === "busy" ? "Opening…" : "Open vault"}</button>{err && <div style={{ color: "var(--danger)", fontSize: 13, marginTop: 6 }}>{err}</div>}<div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Costs about 0.02 NEAR for the enclave.</div></span>;
+}

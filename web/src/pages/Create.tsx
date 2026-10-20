@@ -1,3 +1,4 @@
+import { currentUser } from "../lib/privy";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, UploadSimple, FileText, Trash, Plus, LockKey, CircleNotch, CheckCircle, ArrowLeft, ArrowRight, EnvelopeSimple } from "@phosphor-icons/react";
@@ -48,7 +49,7 @@ export default function Create() {
       setPhase(0);
       const fileData = await Promise.all(files.map(async (f) => ({ name: f.name, type: f.type, bytes: new Uint8Array(await f.arrayBuffer()) })));
       setPhase(1);
-      const v = await buildVault({ owner: account, ownerName: ownerName.trim(), message, heirs, files: fileData, upload: pinBytes });
+      const v = await buildVault({ owner: account, ownerName: ownerName.trim(), ownerEmail: (await currentUser())?.email ?? undefined, message, heirs, files: fileData, upload: pinBytes });
       setPhase(2);
       const r = await callVault("create_vault", { commitment: v.commitment, cid: v.cid, heirs: v.heirs, interval_s: interval, grace_s: grace }, { tgas: 30 });
       let id = r.value;

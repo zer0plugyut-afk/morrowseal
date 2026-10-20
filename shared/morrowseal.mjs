@@ -38,7 +38,7 @@ export function newKeypair() { const k = new PrivateKey(); return { sk: k.toHex(
  * Build a vault: encrypt each file under one fresh file key, then seal the manifest
  * (file key, CIDs, heirs, message) to the enclave. `upload(bytes) -> cid` stores ciphertext on IPFS.
  */
-export async function buildVault({ owner, ownerName, message, heirs, files, upload, enclavePub = ENCLAVE_PUBKEY }) {
+export async function buildVault({ owner, ownerName, ownerEmail, message, heirs, files, upload, enclavePub = ENCLAVE_PUBKEY }) {
   const fileKey = randomBytes(32);
   const manifest = [];
   for (const f of files) {
@@ -46,7 +46,7 @@ export async function buildVault({ owner, ownerName, message, heirs, files, uplo
     const cid = await upload(ct, `${toHex(randomBytes(6))}.bin`);
     manifest.push({ cid, name: f.name, type: f.type || "application/octet-stream", size: f.bytes.length });
   }
-  const sealed = seal(enclavePub, { v: 1, owner, owner_name: ownerName, message, file_key: toHex(fileKey), files: manifest, heirs: heirs.map((h) => ({ name: h.name, email: h.email.trim().toLowerCase() })) });
+  const sealed = seal(enclavePub, { v: 1, owner, owner_name: ownerName, ...(ownerEmail ? { owner_email: ownerEmail.trim().toLowerCase() } : {}), message, file_key: toHex(fileKey), files: manifest, heirs: heirs.map((h) => ({ name: h.name, email: h.email.trim().toLowerCase() })) });
   const commitment = await sha256Hex(sealed);
   const cid = await upload(sealed, `${commitment.slice(0, 12)}.sealed`);
   return { sealed, commitment, cid, heirs: heirs.length };
@@ -58,6 +58,15 @@ export function buildClaim({ token, claimant, idToken, enclavePub = ENCLAVE_PUBK
   const claim = seal(enclavePub, { token, eph_pub: k.pub, claimant, ...(idToken ? { id_token: idToken } : {}) });
   return { claimHex: toHex(claim), ephSk: k.sk };
 }
+
+/** Owner side: a preview request sealed to the enclave (Privy token + one-time key). */
+export function buildOwnerOpen({ idToken, enclavePub = ENCLAVE_PUBKEY }) {
+  const k = newKeypair();
+  return { requestHex: toHex(seal(enclavePub, { id_token: idToken, eph_pub: k.pub })), ephSk: k.sk };
+}
+
+/** Vaults sealed before owner preview existed carry no owner email. */
+export const OWNER_PREVIEW_FROM = 7;
 
 export async function openGift(ephSk, keyCtHex, fetchCid) {
   const gift = unseal(ephSk, fromHex(keyCtHex));

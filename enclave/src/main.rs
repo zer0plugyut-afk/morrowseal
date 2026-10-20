@@ -44,6 +44,9 @@ struct Sealed {
     file_key: String,
     #[serde(default)]
     files: serde_json::Value,
+    /// owner's sign-in email (lowercased) for owner_open; absent on vaults sealed before it existed
+    #[serde(default)]
+    owner_email: Option<String>,
     heirs: Vec<Heir>,
 }
 
@@ -123,13 +126,19 @@ fn vault_on_chain(id: u64) -> Result<serde_json::Value, String> {
     serde_json::from_slice(&bytes).map_err(|e| format!("vault json: {e}"))
 }
 
-fn open_released(input: &Input) -> Result<(u64, String, Sealed), String> {
+#[derive(Deserialize)]
+struct OwnerReq { id_token: String, eph_pub: String }
+
+fn open_released(input: &Input) -> Result<(u64, String, Sealed), String> { open_vault(input, true) }
+
+fn open_vault(input: &Input, need_released: bool) -> Result<(u64, String, Sealed), String> {
     let id = input.vault_id.ok_or("vault_id")?;
     let ct = hex::decode(input.ciphertext_hex.as_deref().ok_or("ciphertext_hex")?.trim_start_matches("0x")).map_err(|e| format!("ct hex: {e}"))?;
     let commitment = hex::encode(Sha256::digest(&ct));
     let v = vault_on_chain(id)?;
     if v["commitment"].as_str() != Some(commitment.as_str()) { return Err("ciphertext does not match the vault commitment".into()); }
-    if v["status"].as_str() != Some("Released") { return Err("vault is not released".into()); }
+    if need_released && v["status"].as_str() != Some("Released") { return Err("vault is not released".into()); }
+    if v["status"].as_str() == Some("Cancelled") { return Err("vault was cancelled".into()); }
     let plain = ecies::decrypt(&secret_key()?, &ct).map_err(|_| "decrypt failed".to_string())?;
     let s: Sealed = serde_json::from_slice(&plain).map_err(|e| format!("vault json: {e}"))?;
     if s.v != 1 || v["owner"].as_str() != Some(s.owner.as_str()) { return Err("vault is not bound to this owner".into()); }
@@ -174,6 +183,19 @@ fn run(input: Input) -> Result<serde_json::Value, String> {
                 "commitment": commitment, "heir_index": i, "claimant": req.claimant, "verified_email": verified_email,
                 "key_ct": seal_to(&req.eph_pub, gift.to_string().as_bytes())?,
             }))
+        }
+        "owner_open" => {
+            let (id, commitment, s) = open_vault(&input, false)?;
+            let want = s.owner_email.as_deref().map(|e| e.trim().to_lowercase()).filter(|e| !e.is_empty())
+                .ok_or("owner preview unavailable for vaults sealed before this update")?;
+            let cbytes = hex::decode(input.claim_hex.as_deref().ok_or("claim_hex")?.trim_start_matches("0x")).map_err(|_| "request hex".to_string())?;
+            let cplain = ecies::decrypt(&secret_key()?, &cbytes).map_err(|_| "request decrypt failed".to_string())?;
+            let req: OwnerReq = serde_json::from_slice(&cplain).map_err(|e| format!("request json: {e}"))?;
+            let emails = jwt::verified_email(&req.id_token)?;
+            if !emails.split(',').any(|e| e == want) { return Err("signed-in email is not the owner's email".into()); }
+            let gift = serde_json::json!({ "vault_id": id, "owner_name": s.owner_name, "heir_name": "", "message": s.message, "file_key": s.file_key, "files": s.files,
+                "heirs": s.heirs });
+            Ok(serde_json::json!({ "commitment": commitment, "key_ct": seal_to(&req.eph_pub, gift.to_string().as_bytes())? }))
         }
         other => Err(format!("unknown action {other}")),
     }
