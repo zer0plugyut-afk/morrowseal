@@ -394,8 +394,12 @@ dd .heir-chips { justify-content: flex-start; }
   .seg { display: flex; } .seg button { flex: 1 1 auto; padding: 8px 12px; }
   .review > div { flex-wrap: wrap; } .review > div b { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 }
-/* Pager: theme tokens so it reads in light and dark */
-.pager .mu-pagination { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border); border-radius: 99px; }
-.pager .mu-pagination button, .pager .mu-pagination a, .pager .mu-pagination span { color: var(--text) !important; background: transparent !important; }
-.pager .mu-pagination [aria-current="page"], .pager .mu-pagination [aria-current="true"], .pager .mu-pagination [data-selected], .pager .mu-pagination [data-active="true"] { background: var(--text) !important; color: var(--bg) !important; border-radius: 99px; }
-.pager .mu-pagination button:disabled { opacity: .4; }
+/* Pager, light mode only. Real DOM (metalui Pagination): nav.mu-pagination > div.mu-switcher (track)
+   > div.mu-switcher-thumb (sliding current-page circle) + button.mu-icon-trigger (arrows, pages) + span.mu-pagination-gap. */
+[data-theme="light"] .mu-pagination .mu-switcher { background: #fff !important; background-image: none !important; border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.06) !important; }
+[data-theme="light"] .mu-pagination .mu-switcher-thumb { background: #1a1615 !important; background-image: none !important; box-shadow: 0 1px 4px rgba(0,0,0,.18) !important; }
+[data-theme="light"] .mu-pagination .mu-icon-trigger { color: #1a1615 !important; background: transparent !important; }
+[data-theme="light"] .mu-pagination .mu-icon-trigger[aria-current="page"] { color: #fff !important; }
+[data-theme="light"] .mu-pagination .mu-icon-trigger svg { color: #1a1615 !important; fill: currentColor; opacity: 1; }
+[data-theme="light"] .mu-pagination .mu-icon-trigger:disabled svg { opacity: .35; }
+[data-theme="light"] .mu-pagination .mu-pagination-gap { color: #757170 !important; }
