@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple, LockKey, PencilSimple, Clock, Warning, Bell, EnvelopeSimple, LockKeyOpen, XCircle, Info, CircleNotch, ClockCounterClockwise } from "@phosphor-icons/react";
-import { Pagination, useToast, Avatar } from "@unlocalhosted/metalui";
+import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple, LockKey, PencilSimple, Clock, Warning, Bell, EnvelopeSimple, LockKeyOpen, XCircle, Info, CircleNotch, ClockCounterClockwise, HandHeart } from "@phosphor-icons/react";
+import { Pagination, useToast } from "@unlocalhosted/metalui";
+import { Persona } from "../components/Persona";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent, type Vault } from "../lib/near";
 import { countdown, span, when, tzLabel, short } from "../lib/format";
 import { localVaults } from "../lib/local";
+import { identityToken } from "../lib/privy";
 import { useNow, useTheme } from "../components/ui";
 import { label } from "./Vaults";
 import { VAULT_CONTRACT, OUTLAYER_PROJECT, ENCLAVE_PUBKEY } from "@shared/morrowseal.mjs";
@@ -23,7 +25,7 @@ export function Heirs() {
         {rows.length === 0 ? <div className="empty"><UsersThree size={30} /><h3>No heirs yet</h3><p>Name heirs when you create a vault.</p><Link className="btn btn-dark" to="/app/create">Create a vault</Link></div> :
           <div className="list">{rows.map(({ v, i, h }) => (
             <div className="row" key={`${v.id}-${i}`}>
-              <span style={{ flexShrink: 0 }}><Avatar name={h?.name || `Heir ${i + 1}`} /></span>
+              <span style={{ flexShrink: 0 }}><Persona email={h?.email} name={h?.name || `Heir ${i + 1}`} /></span>
               <div className="grow"><div className="t" title={h?.name}>{h?.name || `Heir ${i + 1}`}</div><div className="s" title={h?.email}>{h?.email || "Sealed (created on another device)"} · {v.title}</div></div>
               <span className={`chip ${v.claims[i] ? "chip-green" : v.status === "Released" ? "chip-amber" : "chip-blue"}`}>{v.claims[i] ? "Opened" : v.status === "Released" ? "Emailed" : "Sealed"}</span>
             </div>))}</div>}
@@ -60,19 +62,26 @@ export function CheckIns() {
 }
 
 const PAGE = 10;
+type Ev = ChainEvent & { role?: "owner" | "heir"; owner_name?: string };
 const EV: Record<string, [string, any, string]> = {
-  vault_created: ["Vault sealed", LockKey, "brand"],
+  vault_created: ["Vault created", LockKey, "brand"],
   checked_in: ["Checked in", Heartbeat, "green"],
   vault_updated: ["Contents replaced", PencilSimple, "muted"],
   schedule_changed: ["Schedule changed", Clock, "muted"],
-  vault_released: ["Deadline missed", Warning, "amber"],
-  heirs_notified: ["Heirs notified", Bell, "brand"],
-  heir_email_sent: ["Heirs emailed", EnvelopeSimple, "brand"],
-  heir_claimed: ["Claimed", LockKeyOpen, "green"],
+  vault_released: ["Released", Warning, "amber"],
+  heirs_named: ["Heirs told they were named", UsersThree, "brand"],
+  heirs_notified: ["Heir notices sealed by the enclave", Bell, "brand"],
+  heir_email_sent: ["Heirs notified by email", EnvelopeSimple, "brand"],
+  heir_claimed: ["Heir opened their share", LockKeyOpen, "green"],
   vault_cancelled: ["Cancelled", XCircle, "muted"],
 };
+const HEIR_EV: Record<string, [string, any, string]> = {
+  vault_released: ["A vault shared with you was released", Warning, "amber"],
+  heir_claimed: ["You opened a vault left for you", LockKeyOpen, "green"],
+  vault_cancelled: ["A vault shared with you was closed", XCircle, "muted"],
+};
 export function Activity() {
-  const [events, setEvents] = useState<ChainEvent[] | null>(null);
+  const [events, setEvents] = useState<Ev[] | null>(null);
   const [page, setPage] = useState(1);
   const { account, vaults, watch } = useApp();
   useEffect(() => {
@@ -80,28 +89,29 @@ export function Activity() {
     const load = async () => {
       try {
         if (!account) return;
-        const all = await view<ChainEvent[]>("list_events", { owner: account });
-        if (live) setEvents(all.reverse());
-      } catch { /* RPC busy: try again shortly */ }
+        const token = watch ? null : await identityToken();
+        const r = await fetch(`/api/activity?owner=${encodeURIComponent(account)}`, { cache: "no-store", headers: token ? { authorization: `Bearer ${token}` } : {} });
+        if (r.ok) { const all = (await r.json()) as Ev[]; if (live) setEvents(all.reverse()); }
+      } catch { /* API busy: try again shortly */ }
       if (live) t = setTimeout(load, 15000);
     };
     load(); return () => { live = false; clearTimeout(t); };
-  }, [account]);
-  const ids = useMemo(() => new Set(vaults.map((v) => v.id)), [vaults]);
-  const list = useMemo(() => (watch ? (events || []).filter((e) => ids.has(e.vault_id)) : events || []), [events, ids, watch]);
+  }, [account, watch]);
+  const list = events || [];
   const pages = Math.max(1, Math.ceil(list.length / PAGE));
-  const titleOf = (id: number) => vaults.find((v) => v.id === id)?.title || `Vault ${id}`;
-  if (!account) return (<><Top title="Activity" /><NeedWallet what="See what happened to your vaults: seals, check-ins, releases and claims." /></>);
+  const titleOf = (e: Ev) => (e.role === "heir" ? (e.owner_name ? `from ${e.owner_name}` : `Vault ${e.vault_id}`) : vaults.find((v) => v.id === e.vault_id)?.title || `Vault ${e.vault_id}`);
+  if (!account) return (<><Top title="Activity" /><NeedWallet what="See what happened to your vaults and to vaults left for you." /></>);
   return (
     <>
-      <Top title="Activity" sub={`Everything that happened to your vaults, from NEAR. Times in ${tzLabel()}.`} />
+      <Top title="Activity" sub={`Only your own vaults and the vaults left for you. Times in ${tzLabel()}.`} />
       <div className="card card-pad">
-        {events === null ? <p className="muted"><CircleNotch size={14} className="spin" /> Loading from NEAR…</p>
+        {events === null ? <p className="muted"><CircleNotch size={14} className="spin" /> Loading…</p>
         : list.length === 0 ? (
-          <div className="empty-state"><span className="icon-chip"><ClockCounterClockwise size={22} weight="duotone" /></span><h3>Nothing here yet</h3><p className="muted">When you seal a vault, check in, miss a deadline, or an heir opens what you left, it shows up here with the time and a link to the transaction record.</p></div>
+          <div className="empty-state"><span className="icon-chip"><ClockCounterClockwise size={22} weight="duotone" /></span><h3>Nothing here yet</h3><p className="muted">Create a vault, check in, or open something left for you, and it shows up here with the time in your timezone and a link to the NEAR record.</p><div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}><Link className="btn btn-dark btn-sm" to="/app/create">Create a vault</Link><Link className="btn btn-ghost btn-sm" to="/app/shared">Shared with me</Link></div></div>
         ) : <div className="list">{list.slice((page - 1) * PAGE, page * PAGE).map((e, i) => {
-          const [l, I, tone] = EV[e.kind] || [e.kind, Info, "muted"];
-          return (<div className="row ev-row" key={i}><span className={`ev-ic tone-${tone}`}><I size={18} weight="duotone" /></span><div className="grow"><div className="t">{l} <span className="muted" style={{ fontWeight: 400 }}>· {titleOf(e.vault_id)}</span></div><div className="s">{when(nsToMs(e.at_ns))}{e.detail ? ` · ${e.detail}` : ""}{e.actor !== account ? (e.actor.endsWith(".testnet") ? " · by the keeper" : "") : " · by you"}</div></div></div>);
+          const [l, I, tone] = (e.role === "heir" ? HEIR_EV[e.kind] : EV[e.kind]) || EV[e.kind] || [e.kind, Info, "muted"];
+          const by = e.role === "heir" ? "" : e.actor === account ? " · by you" : e.actor === "keeper" || e.actor.endsWith(".testnet") ? " · by the keeper" : "";
+          return (<div className="row ev-row" key={i}><span className={`ev-ic tone-${tone}`}><I size={18} weight="duotone" /></span><div className="grow"><div className="t">{l} <span className="muted" style={{ fontWeight: 400 }}>· {titleOf(e)}</span></div><div className="s">{when(nsToMs(e.at_ns))}{e.detail && e.role !== "heir" ? ` · ${e.detail}` : ""}{by}</div></div></div>);
         })}</div>}
         {pages > 1 && <div className="pager"><Pagination page={page} count={pages} onPageChange={setPage} aria-label="Activity pages" /></div>}
       </div>
@@ -109,6 +119,50 @@ export function Activity() {
   );
 }
 
+type Shared = { vault_id: number; heir_index: number; heir_name: string; owner_name: string; owner: string; status: "waiting" | "released" | "opened" | "cancelled"; created_ns: string; released_ns: string | null; claimed_ns: string | null; link: string | null };
+const ST: Record<Shared["status"], [string, string]> = { waiting: ["Waiting", "chip-blue"], released: ["Released", "chip-amber"], opened: ["Opened", "chip-green"], cancelled: ["Closed", "chip-muted"] };
+export function SharedWithMe() {
+  const { account, email, watch } = useApp();
+  const [rows, setRows] = useState<Shared[] | null>(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    let live = true, t: any;
+    const load = async () => {
+      try {
+        if (!account || watch) return;
+        const token = await identityToken();
+        const r = await fetch("/api/shared", { cache: "no-store", headers: { authorization: `Bearer ${token}` } });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || "Could not load");
+        if (live) { setRows(j); setErr(""); }
+      } catch (e: any) { if (live) setErr(String(e?.message || e)); }
+      if (live) t = setTimeout(load, 20000);
+    };
+    load(); return () => { live = false; clearTimeout(t); };
+  }, [account, watch]);
+  if (!account || watch) return (<><Top title="Shared with me" /><NeedWallet what="See every vault where your email was named as an heir." /></>);
+  return (
+    <>
+      <Top title="Shared with me" sub={`Vaults that name ${email || "your email"} as an heir. Times in ${tzLabel()}.`} />
+      <div className="card card-pad">
+        {err && !rows ? <div className="banner warn"><Info size={20} /> {err}</div>
+        : rows === null ? <p className="muted"><CircleNotch size={14} className="spin" /> Loading…</p>
+        : rows.length === 0 ? <div className="empty-state"><span className="icon-chip"><HandHeart size={22} weight="duotone" /></span><h3>Nothing shared with you yet</h3><p className="muted">When someone names your email as an heir in their vault, it appears here. Nothing inside is visible until it is released to you.</p></div>
+        : <div className="list">{rows.map((r) => {
+          const [l, c] = ST[r.status];
+          const sub = r.status === "opened" ? `Opened ${when(nsToMs(r.claimed_ns!))}` : r.status === "released" ? `Released ${when(nsToMs(r.released_ns!))}` : r.status === "waiting" ? `Sealed ${when(nsToMs(r.created_ns))} · stays sealed while they check in` : "Closed by its owner";
+          return (<div className="row" key={`${r.vault_id}-${r.heir_index}`}>
+            <Persona name={r.owner_name || r.owner} email={r.owner} />
+            <div className="grow"><div className="t">{r.owner_name ? `From ${r.owner_name}` : `Vault ${r.vault_id}`}</div><div className="s">{sub}</div></div>
+            <span className={`chip ${c}`}>{l}</span>
+            {(r.status === "released" || r.status === "opened") && r.link ? <a className="btn btn-dark btn-sm" href={r.link}><LockKeyOpen size={16} /> {r.status === "opened" ? "Reopen" : "Open"}</a>
+              : r.status === "waiting" ? <a className="btn btn-ghost btn-sm" href={`/waiting/${r.vault_id}`}>Details</a> : null}
+          </div>);
+        })}</div>}
+      </div>
+    </>
+  );
+}
 export function Proof() {
   const [cfg, setCfg] = useState<any>(null);
   const [sample, setSample] = useState<Vault | null>(null);

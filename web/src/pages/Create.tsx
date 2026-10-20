@@ -2,7 +2,8 @@ import { currentUser } from "../lib/privy";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, UploadSimple, FileText, Trash, Plus, LockKey, CircleNotch, CheckCircle, ArrowLeft, ArrowRight, EnvelopeSimple } from "@phosphor-icons/react";
-import { useToast, Avatar } from "@unlocalhosted/metalui";
+import { useToast } from "@unlocalhosted/metalui";
+import { Persona } from "../components/Persona";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { buildVault } from "@shared/morrowseal.mjs";
@@ -110,7 +111,7 @@ export default function Create() {
               <p className="muted">Names and emails are sealed inside the vault. The chain only learns how many heirs there are. Each heir signs in with this email to open it.</p>
               <div className="form">
                 {heirs.map((h, i) => (<div className="heir-row" key={i}>
-                  <span className="heir-av"><Avatar name={h.name || "?"} /></span>
+                  <span className="heir-av"><Persona email={h.email} name={h.name || "?"} /></span>
                   <input className="input" placeholder="Name" value={h.name} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
                   <input className="input" placeholder="email@example.com" type="email" value={h.email} onChange={(e) => setHeirs(heirs.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))} />
                   <button className="icon-btn" style={{ height: 48, width: 40 }} disabled={heirs.length === 1} onClick={() => setHeirs(heirs.filter((_, j) => j !== i))} aria-label="Remove heir"><Trash size={16} /></button>
@@ -134,7 +135,7 @@ export default function Create() {
                 <div><span>Title</span><b>{title}</b></div>
                 <div><span>From</span><b>{ownerName}</b></div>
                 <div><span>Files</span><b title={files.map((f) => f.name).join(", ")}>{files.length ? files.map((f) => f.name).join(", ") : "Message only"}</b></div>
-                <div><span>Heirs</span><b className="heir-chips">{heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Avatar name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</b></div>
+                <div><span>Heirs</span><b className="heir-chips">{heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Persona email={h.email} name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</b></div>
                 <div><span>Releases after</span><b>{span(interval + grace)} of silence</b></div>
                 <div><span>Stored on NEAR</span><b>hash · IPFS address · {heirs.length} {heirs.length === 1 ? 'heir' : 'heirs'} · times</b></div>
               </div>

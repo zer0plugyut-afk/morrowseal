@@ -1,7 +1,8 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Plus, Heartbeat, UsersThree, Files, ArrowSquareOut, XCircle, ArrowLeft, Clock } from "@phosphor-icons/react";
-import { useToast, StatusBadge, Avatar } from "@unlocalhosted/metalui";
+import { useToast, StatusBadge } from "@unlocalhosted/metalui";
+import { Persona } from "../components/Persona";
 import { Top, NeedWallet } from "../app/Shell";
 import { useApp } from "../app/state";
 import { VaultShelf } from "../components/VaultShelf";
@@ -85,7 +86,7 @@ export function VaultDetail() {
           <div style={{ fontFamily: "var(--font-display)", fontSize: 44, letterSpacing: "-.04em", margin: "16px 0 4px" }}>{v.status === "Active" ? (left > 0 ? countdown(left) : "Releasing…") : v.status === "Released" ? (v.claims.every(Boolean) ? "Opened" : "Claimable") : "Cancelled"}</div>
           <p className="muted">{v.status === "Active" ? `Releases on ${when(deadline(v))} (${tzLabel()}) unless you check in. You check in every ${span(v.interval_s)}${v.grace_s ? `, plus ${span(v.grace_s)} grace` : ""}.` : v.status === "Released" ? `Released ${when(nsToMs(v.released_ns!))}. ${v.mailed ? "Heirs were emailed." : "Emailing heirs…"}` : "Nothing will be sent."}</p>
           <dl className="kv" style={{ marginTop: 24 }}>
-            <dt>Heirs</dt><dd>{local?.heirs.length ? <span className="heir-chips">{local.heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Avatar name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</span> : `${v.heirs} (names are only on the device that made it)`}</dd>
+            <dt>Heirs</dt><dd>{local?.heirs.length ? <span className="heir-chips">{local.heirs.map((h, k) => <span key={k} className="heir-chip" title={`${h.name} · ${h.email}`}><Persona email={h.email} name={h.name} size="small" /><span className="ellipsis">{h.name}</span></span>)}</span> : `${v.heirs} (names are only on the device that made it)`}</dd>
             <dt>Files</dt><dd>{local?.files.map((f) => f.name).join(", ") || "Sealed"}</dd>
             <dt>Emails</dt><dd>{v.status === "Released" ? (v.mailed ? "Heirs have been emailed their link." : "Emailing heirs now…") : `Heirs were told they were named. Their link is emailed only if you miss a check-in (after ${span(v.interval_s + v.grace_s)} of silence).`}</dd>
             <dt>Check-ins</dt><dd>{v.checkins} · last {when(nsToMs(v.last_checkin_ns))}</dd>

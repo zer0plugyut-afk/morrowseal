@@ -10,6 +10,8 @@
     "preview": "vite preview --port 3000"
   },
   "dependencies": {
+    "@dicebear/collection": "^9.4.2",
+    "@dicebear/core": "^9.4.3",
     "@phosphor-icons/react": "^2.1.10",
     "@privy-io/react-auth": "^3.50.0",
     "@solana-program/system": "^0.16.0",

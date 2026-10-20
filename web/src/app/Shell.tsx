@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, SignOut, EnvelopeSimple, Copy, ArrowSquareOut } from "@phosphor-icons/react";
+import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, HandHeart, SignOut, EnvelopeSimple, Copy, ArrowSquareOut } from "@phosphor-icons/react";
 import { Logo, ThemeToggle } from "../components/ui";
+import { Persona } from "../components/Persona";
 import { useApp } from "./state";
 import { short } from "../lib/format";
 import { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ export const NAV = [
   { to: "/app", icon: Vault, label: "Vaults", end: true },
   { to: "/app/create", icon: PlusCircle, label: "Create" },
   { to: "/app/heirs", icon: UsersThree, label: "Heirs" },
+  { to: "/app/shared", icon: HandHeart, label: "Shared with me" },
   { to: "/app/check-ins", icon: Heartbeat, label: "Check-ins" },
   { to: "/app/activity", icon: ClockCounterClockwise, label: "Activity" },
   { to: "/app/proof", icon: ShieldCheck, label: "Proof" },
@@ -41,7 +43,7 @@ export default function Shell() {
       </aside>
       <main className="main" key={loc.pathname}><div className="fade-up page-narrow"><Outlet /></div></main>
       <nav className="bottom-nav">
-        {NAV.filter((n) => n.label !== "Settings").map(({ to, icon: I, label, end }) => (
+        {NAV.filter((n) => n.label !== "Settings" && n.label !== "Proof").map(({ to, icon: I, label, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? "active" : "")}>{({ isActive }) => (<><I size={22} weight={isActive ? "fill" : "regular"} />{label}</>)}</NavLink>
         ))}
       </nav>
@@ -84,7 +86,7 @@ function AccountCard({ account, email, watch, onLogout }: { account: string; ema
   return (
     <div className="acct-card">
       <div className="acct">
-        <span className="dot" />
+        <Persona email={email} name={account} size={30} />
         <div className="acct-id">
           <div className="muted acct-k">{watch ? "Viewing read-only" : "Signed in · testnet"}</div>
           <div className="who" title={email || account}>{email || short(account, 10, 6)}</div>

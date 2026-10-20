@@ -5,7 +5,8 @@ import path from "node:path";
 import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
 import { tick, relayClaim } from "./lib.mjs";
-import { fund, privyUser } from "./fund.mjs";
+import { fund, privyUser, privyEmails } from "./fund.mjs";
+import { indexNamed, indexNotice, sharedWith, claimLink, record, keeperEvents } from "./heirs.mjs";
 import { fresh, ownerIds } from "./index-cache.mjs";
 import { namedEmail, sendMail } from "./email.mjs";
 import { view } from "./chain.mjs";
@@ -22,7 +23,10 @@ const ops = await account(process.env.NEAR_OPS_ID, process.env.NEAR_OPS_KEY);
 let last = { at: null, vaults: 0, error: null };
 
 async function loop() {
-  try { last = { at: new Date().toISOString(), vaults: await tick(ops, { appUrl: APP_URL }), error: null }; }
+  try {
+    last = { at: new Date().toISOString(), vaults: await tick(ops, { appUrl: APP_URL }), error: null };
+    const st = await fresh(); for (const v of st.vaults.values()) indexNotice(v);
+  }
   catch (e) { last = { ...last, at: new Date().toISOString(), error: e.message.slice(0, 200) }; }
   setTimeout(loop, INTERVAL);
 }
@@ -59,9 +63,44 @@ http.createServer(async (req, res) => {
     const vm = url.pathname.match(/^\/api\/(?:vaults|claim)\/(\d+)$/);
     if (req.method === "GET" && vm) { const st = await fresh(); const v = st.vaults.get(Number(vm[1])); return v ? json(res, 200, v) : json(res, 404, { error: "not found" }); }
     if (req.method === "GET" && url.pathname === "/api/activity") {
+      // Only the caller's own story: events on vaults they own, plus (when signed in) the vaults
+      // where their verified email is a named heir: release and their own claims.
       const st = await fresh(); const owner = url.searchParams.get("owner"); const vid = url.searchParams.get("vault");
-      const ids = owner ? ownerIds(st, owner) : null;
-      return json(res, 200, st.events.filter((e) => (!ids || ids.has(e.vault_id)) && (!vid || e.vault_id === Number(vid))));
+      const all = [...st.events, ...keeperEvents()];
+      const out = [];
+      if (owner) {
+        const ids = ownerIds(st, owner);
+        for (const e of all) if (ids.has(e.vault_id) || e.actor === owner) out.push({ ...e, role: "owner" });
+      }
+      const bearer = (req.headers.authorization || "").replace(/^Bearer /, "");
+      if (bearer) {
+        const emails = await privyEmails(bearer);
+        for (const x of emails ? sharedWith(emails) : []) {
+          if (owner && st.vaults.get(x.vault_id)?.owner === owner) continue;
+          for (const e of st.events) if (e.vault_id === x.vault_id && (e.kind === "vault_released" || e.kind === "vault_cancelled" || (e.kind === "heir_claimed" && e.detail.startsWith(`heir #${x.heir_index + 1} `)))) out.push({ ...e, role: "heir", owner_name: x.owner_name });
+        }
+      }
+      if (!owner && !bearer && !vid) return json(res, 200, []);
+      const list = vid && !owner && !bearer ? st.events.filter((e) => e.vault_id === Number(vid)) : out.filter((e) => !vid || e.vault_id === Number(vid));
+      list.sort((a, b) => (BigInt(String(a.at_ns)) < BigInt(String(b.at_ns)) ? -1 : 1));
+      return json(res, 200, list);
+    }
+    if (req.method === "GET" && url.pathname === "/api/shared") {
+      if (limited(req, 60)) return json(res, 429, { error: "slow down" });
+      const emails = await privyEmails((req.headers.authorization || "").replace(/^Bearer /, ""));
+      if (!emails) return json(res, 401, { error: "Please sign in again." });
+      const st = await fresh();
+      const out = [];
+      for (const x of sharedWith(emails)) {
+        const v = st.vaults.get(x.vault_id); if (!v) continue;
+        const c = v.claims?.[x.heir_index];
+        const status = v.status === "Cancelled" ? "cancelled" : c ? "opened" : v.status === "Released" ? "released" : "waiting";
+        out.push({ vault_id: v.id, heir_index: x.heir_index, heir_name: x.name, owner_name: x.owner_name, owner: v.owner, status, verified: x.source === "notice",
+          created_ns: String(v.created_ns), released_ns: v.released_ns ? String(v.released_ns) : null, claimed_ns: c ? String(c.claimed_ns) : null,
+          link: v.status === "Released" ? claimLink(v, x.heir_index, APP_URL) : `/waiting/${v.id}` });
+      }
+      out.sort((a, b) => b.vault_id - a.vault_id);
+      return json(res, 200, out);
     }
     if (url.pathname === "/api/rpc" && req.method === "POST") {
       if (limited(req, 240)) return json(res, 429, { error: "slow down" });
@@ -96,12 +135,15 @@ http.createServer(async (req, res) => {
       const ageMs = Date.now() - Number(BigInt(v?.created_ns || 0) / 1_000_000n);
       if (!v || v.status !== "Active" || ageMs > 20 * 60_000 || j.heirs.length > v.heirs || namedSent.has(j.vault_id)) return json(res, 409, { error: "not eligible" });
       namedSent.add(j.vault_id);
+      indexNamed(j.vault_id, j.heirs.slice(0, v.heirs), j.owner_name);
       const out = [];
       for (const h of j.heirs) {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(h.email || ""))) continue;
         try { const id = await sendMail({ to: h.email.trim(), toName: String(h.name || "").slice(0, 60), ...namedEmail({ heirName: String(h.name || "").slice(0, 60), ownerName: String(j.owner_name || "").slice(0, 60), appUrl: APP_URL, vaultId: j.vault_id }) }); out.push("sent"); console.log(new Date().toISOString(), "named notice vault", j.vault_id, "->", id); }
         catch (e) { out.push("failed"); console.log(new Date().toISOString(), "named notice vault", j.vault_id, "FAILED", e.message.slice(0, 200)); }
       }
+      const n = out.filter((x) => x === "sent").length;
+      if (n) record("heirs_named", j.vault_id, n === 1 ? "1 heir told they were named" : `${n} heirs told they were named`);
       return json(res, 200, { results: out });
     }
     if (url.pathname === "/api/claim" && req.method === "POST") {

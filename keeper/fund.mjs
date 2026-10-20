@@ -35,3 +35,14 @@ export async function privyUser(bearer) {
   if (!jwks) return null;
   try { const { payload } = await jwtVerify(bearer || "", jwks, { issuer: "privy.io", audience: APP_ID }); return payload.sub; } catch { return null; }
 }
+
+/** Verified emails (lowercased) for a Privy access token: email-code and Google accounts only. */
+export async function privyEmails(bearer) {
+  const sub = await privyUser(bearer);
+  if (!sub) return null;
+  const r = await fetch("https://auth.privy.io/api/v1/users/me", { headers: { authorization: `Bearer ${bearer}`, "privy-app-id": APP_ID, origin: process.env.APP_URL || "https://morrowseal-production.up.railway.app" }, signal: AbortSignal.timeout(8000) });
+  if (!r.ok) return null;
+  const j = await r.json(); const u = j.user || j;
+  if (u.id !== sub) return null;
+  return [...new Set((u.linked_accounts || []).map((a) => (a.type === "email" ? a.address : a.type === "google_oauth" ? a.email : null)).filter(Boolean).map((e) => e.trim().toLowerCase()))];
+}

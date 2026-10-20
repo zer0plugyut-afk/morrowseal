@@ -7,7 +7,7 @@ import Vaults, { VaultDetail } from "./pages/Vaults";
 import Create from "./pages/Create";
 import Waiting from "./pages/Waiting";
 import Claim from "./pages/Claim";
-import { Heirs, CheckIns, Activity, Proof, Settings } from "./pages/Misc";
+import { Heirs, CheckIns, Activity, Proof, Settings, SharedWithMe } from "./pages/Misc";
 
 export default function App() {
   return (
@@ -23,6 +23,7 @@ export default function App() {
             <Route path="create" element={<Create />} />
             <Route path="heirs" element={<Heirs />} />
             <Route path="check-ins" element={<CheckIns />} />
+            <Route path="shared" element={<SharedWithMe />} />
             <Route path="activity" element={<Activity />} />
             <Route path="proof" element={<Proof />} />
             <Route path="settings" element={<Settings />} />
