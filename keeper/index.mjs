@@ -6,10 +6,12 @@ import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
 import { tick, relayClaim } from "./lib.mjs";
 import { fund, privyUser } from "./fund.mjs";
+import { fresh, ownerIds } from "./index-cache.mjs";
 import { namedEmail, sendMail } from "./email.mjs";
 import { view } from "./chain.mjs";
 import { VAULT_CONTRACT } from "../shared/morrowseal.mjs";
 const namedSent = new Set();
+const RPC_UPSTREAMS = (process.env.RPC_UPSTREAMS || "https://test.rpc.fastnear.com,https://rpc.testnet.near.org,https://neart.lava.build,https://rpc.testnet.pagoda.co").split(",");
 
 const PORT = Number(process.env.PORT || 8790);
 const HOST = process.env.PORT ? "0.0.0.0" : "127.0.0.1";
@@ -49,6 +51,35 @@ http.createServer(async (req, res) => {
     }
     const m = url.pathname.match(/^\/api\/ipfs\/([a-zA-Z0-9]+)$/);
     if (m && req.method === "GET") { const b = await fetchCid(m[1]); res.writeHead(200, { "content-type": "application/octet-stream", "cache-control": "public, max-age=31536000, immutable", "access-control-allow-origin": "*" }); return res.end(b); }
+    if (req.method === "GET" && url.pathname === "/api/config") { const st = await fresh(); return json(res, 200, st.config); }
+    if (req.method === "GET" && url.pathname === "/api/vaults") {
+      const st = await fresh(); const owner = url.searchParams.get("owner");
+      return json(res, 200, [...st.vaults.values()].filter((v) => !owner || v.owner === owner));
+    }
+    const vm = url.pathname.match(/^\/api\/(?:vaults|claim)\/(\d+)$/);
+    if (req.method === "GET" && vm) { const st = await fresh(); const v = st.vaults.get(Number(vm[1])); return v ? json(res, 200, v) : json(res, 404, { error: "not found" }); }
+    if (req.method === "GET" && url.pathname === "/api/activity") {
+      const st = await fresh(); const owner = url.searchParams.get("owner"); const vid = url.searchParams.get("vault");
+      const ids = owner ? ownerIds(st, owner) : null;
+      return json(res, 200, st.events.filter((e) => (!ids || ids.has(e.vault_id)) && (!vid || e.vault_id === Number(vid))));
+    }
+    if (url.pathname === "/api/rpc" && req.method === "POST") {
+      if (limited(req, 240)) return json(res, 429, { error: "slow down" });
+      const raw = (await body(req, 256 * 1024)).toString();
+      let m; try { m = JSON.parse(raw).method; } catch { return json(res, 400, { error: "bad json" }); }
+      if (!["query", "block", "send_tx", "broadcast_tx_commit", "broadcast_tx_async", "tx", "status", "gas_price"].includes(m)) return json(res, 400, { error: "method not allowed" });
+      let lastErr = "no upstream";
+      for (const up of RPC_UPSTREAMS) {
+        try {
+          const r = await fetch(up, { method: "POST", headers: { "content-type": "application/json" }, body: raw, signal: AbortSignal.timeout(m.startsWith("send") || m.startsWith("broadcast") ? 60000 : 12000) });
+          if (r.status === 429 || r.status >= 500) { lastErr = `${up} ${r.status}`; continue; }
+          const text = await r.text();
+          res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+          return res.end(text);
+        } catch (e) { lastErr = `${up} ${e.message}`; }
+      }
+      return json(res, 502, { jsonrpc: "2.0", id: 1, error: { message: "NEAR RPC unavailable", cause: { name: lastErr.slice(0, 120) } } });
+    }
     if (url.pathname === "/api/fund" && req.method === "POST") {
       if (limited(req, 5)) return json(res, 429, { error: "slow down" });
       const j = JSON.parse((await body(req, 4096)).toString());

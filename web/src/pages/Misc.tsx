@@ -79,16 +79,16 @@ export function Activity() {
     let live = true, t: any;
     const load = async () => {
       try {
-        const cfg = await view("get_config"); const all: ChainEvent[] = [];
-        for (let f = 0; f < cfg.events; f += 100) all.push(...(await view<ChainEvent[]>("list_events", { from: f, limit: 100 })));
+        if (!account) return;
+        const all = await view<ChainEvent[]>("list_events", { owner: account });
         if (live) setEvents(all.reverse());
       } catch { /* RPC busy: try again shortly */ }
       if (live) t = setTimeout(load, 15000);
     };
     load(); return () => { live = false; clearTimeout(t); };
-  }, []);
+  }, [account]);
   const ids = useMemo(() => new Set(vaults.map((v) => v.id)), [vaults]);
-  const list = useMemo(() => (events || []).filter((e) => ids.has(e.vault_id)), [events, ids]);
+  const list = useMemo(() => (watch ? (events || []).filter((e) => ids.has(e.vault_id)) : events || []), [events, ids, watch]);
   const pages = Math.max(1, Math.ceil(list.length / PAGE));
   const titleOf = (id: number) => vaults.find((v) => v.id === id)?.title || `Vault ${id}`;
   if (!account) return (<><Top title="Activity" /><NeedWallet what="See what happened to your vaults: seals, check-ins, releases and claims." /></>);

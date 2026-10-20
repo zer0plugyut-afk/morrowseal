@@ -7,7 +7,7 @@ import { actions, createTransaction, PublicKey, SignedTransaction, Signature, ba
 import { VAULT_CONTRACT } from "@shared/morrowseal.mjs";
 
 export const PRIVY_APP_ID = (import.meta.env.VITE_PRIVY_APP_ID as string) || "";
-const RPC = "https://rpc.testnet.near.org";
+const RPC = "/api/rpc";
 
 type Bridge = {
   ready: boolean; authenticated: boolean; user: any; identityToken: string | null;

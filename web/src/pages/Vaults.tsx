@@ -48,16 +48,18 @@ export function VaultDetail() {
   const toast = useToast();
   const now = useNow();
   const [events, setEvents] = useState<ChainEvent[]>([]);
+  const [evErr, setEvErr] = useState(false);
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 8000); return () => clearTimeout(t); }, []);
   const v = vaults.find((x) => x.id === vid);
   const local = localVaults()[vid];
   useEffect(() => {
     let live = true, t: any;
     const load = async () => {
       try {
-        const cfg = await view("get_config"); const all: ChainEvent[] = [];
-        for (let f = 0; f < cfg.events; f += 100) all.push(...(await view<ChainEvent[]>("list_events", { from: f, limit: 100 })));
-        if (live) setEvents(all.filter((x) => x.vault_id === vid).reverse());
-      } catch {}
+        const all = await view<ChainEvent[]>("list_events", { vault: vid });
+        if (live) { setEvents(all.reverse()); setEvErr(false); }
+      } catch { if (live) setEvErr(true); }
       if (live) t = setTimeout(load, 10000);
     };
     load(); return () => { live = false; clearTimeout(t); };
@@ -65,7 +67,7 @@ export function VaultDetail() {
   // While the deadline has passed but the chain still says Active, poll quickly.
   useEffect(() => { if (!v || v.status !== "Active" || deadline(v) > now) return; const t = setInterval(() => refresh(), 5000); return () => clearInterval(t); }, [v?.status, v && deadline(v) <= now]);
   if (!account) return <NeedWallet what="Sign in with the email that owns this vault." />;
-  if (!v) return <div className="card empty"><h3>Loading vault…</h3></div>;
+  if (!v) return <div className="card empty"><h3>{slow ? "This vault isn't loading" : "Loading vault…"}</h3>{slow && <p className="muted">It may belong to another account, or the network is slow. We'll keep trying. <Link className="link" to="/app">Back to your vaults</Link></p>}</div>;
   const left = deadline(v) - now;
   const act = (method: string, label: string) => toast.promise(callVault(method, { vault_id: v.id }, { tgas: 20 }).then((r) => { refresh(); return r; }), { loading: { title: label }, success: { title: method === "cancel" ? "Vault cancelled" : "You're checked in", tone: "success" }, error: (e: any) => ({ title: "That didn't go through", sub: String(e?.message || e).slice(0, 80), tone: "error" }) });
   return (
@@ -94,7 +96,7 @@ export function VaultDetail() {
         </div>
         <div className="card card-pad">
           <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.03em", marginBottom: 18 }}>History</h3>
-          {events.length === 0 ? <p className="muted" style={{ marginBottom: 16 }}>Loading this vault's history from NEAR…</p> :
+          {events.length === 0 ? <p className="muted" style={{ marginBottom: 16 }}>{evErr ? "Couldn't load history right now. Retrying…" : "Loading history…"}</p> :
           <div className="tl">{events.map((e, i) => <div key={i} className="tl-item"><div className="t">{label(e.kind)}</div><div className="s">{when(nsToMs(e.at_ns))} · {e.actor === v.owner ? "you" : e.actor.endsWith(".testnet") ? "the keeper" : short(e.actor, 10, 6)}{e.detail ? ` · ${e.detail}` : ""}</div></div>)}</div>}
           <a className="link" href={`${EXPLORER}/address/${v.owner}`} target="_blank" rel="noreferrer" style={{ fontSize: 14 }}>View your account on NearBlocks <ArrowSquareOut size={12} /></a>
         </div>

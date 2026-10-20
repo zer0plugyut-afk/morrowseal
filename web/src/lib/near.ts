@@ -1,6 +1,7 @@
 import { VAULT_CONTRACT } from "@shared/morrowseal.mjs";
 
-export const RPC = "https://rpc.testnet.near.org";
+// All NEAR RPC goes through the keeper (same origin) because public RPCs do not send CORS headers.
+export const RPC = "/api/rpc";
 export const EXPLORER = "https://testnet.nearblocks.io";
 
 export type Claim = { claimant: string; verified_email: boolean; key_ct: string; claimed_ns: number };
@@ -11,17 +12,27 @@ export type Vault = {
 };
 export type ChainEvent = { kind: string; vault_id: number; actor: string; at_ns: number | string; detail: string };
 
-const RPCS = [RPC, "https://test.rpc.fastnear.com", "https://rpc.testnet.pagoda.co"];
-export async function view<T = any>(method: string, args: object = {}, contract = VAULT_CONTRACT): Promise<T> {
+// Reads come from the keeper's read model (our API), which mirrors the contract views.
+function route(method: string, args: any): string {
+  switch (method) {
+    case "get_config": return "/api/config";
+    case "vaults_of": return `/api/vaults?owner=${encodeURIComponent(args.owner)}`;
+    case "list_vaults": return "/api/vaults";
+    case "get_vault": return `/api/vaults/${Number(args.vault_id)}`;
+    case "list_events": return `/api/activity?${new URLSearchParams(Object.entries(args).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]))}`;
+    default: throw new Error("unsupported view " + method);
+  }
+}
+export async function view<T = any>(method: string, args: any = {}): Promise<T> {
   let last: any;
-  for (let attempt = 0; attempt < 2; attempt++) for (const url of RPCS) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "call_function", finality: "optimistic", account_id: contract, method_name: method, args_base64: btoa(JSON.stringify(args)) } }) });
-      if (!r.ok) throw new Error(`rpc ${r.status}`);
-      const j = await r.json();
-      if (j.error || j.result?.error) throw new Error(j.error?.data || j.result?.error || "rpc error");
-      return JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result)));
-    } catch (e) { last = e; }
+      const r = await fetch(route(method, args), { cache: "no-store" });
+      if (r.status === 404) return null as T;
+      if (!r.ok) throw new Error(`api ${r.status}`);
+      let out = await r.json();
+      return out as T;
+    } catch (e) { last = e; await new Promise((r) => setTimeout(r, 600 * (attempt + 1))); }
   }
   throw last;
 }
