@@ -3,8 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Morrowseal — a private vault for the people you love</title>
-    <meta name="description" content="Seal files and words for the people you love. The key lives in a secure enclave on NEAR and is released only when you stop checking in." />
+    <title>Morrowseal: private inheritance vault on NEAR with a TEE dead-man switch</title>
+    <meta name="description" content="Private inheritance vault on NEAR. Files are encrypted in your browser and the key is sealed to an OutLayer TEE enclave. If you stop checking in, your heirs open it by signing in with their email. Only a hash goes on chain." />
+    <meta name="keywords" content="NEAR, inheritance, dead man's switch, crypto inheritance, digital estate, TEE, OutLayer, confidential compute, yield resume, Privy, privacy, encrypted vault, heirs" />
+    <meta name="theme-color" content="#0953ff" />
+    <link rel="canonical" href="https://morrowseal-production.up.railway.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Morrowseal" />
+    <meta property="og:title" content="Morrowseal: leave the keys, keep the secret" />
+    <meta property="og:description" content="Private inheritance vault on NEAR. Files are encrypted in your browser and the key is sealed to an OutLayer TEE enclave. If you stop checking in, your heirs open it by signing in with their email. Only a hash goes on chain." />
+    <meta property="og:url" content="https://morrowseal-production.up.railway.app/" />
+    <meta property="og:image" content="https://morrowseal-production.up.railway.app/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Morrowseal: private inheritance vault on NEAR" />
+    <meta name="twitter:description" content="Private inheritance vault on NEAR. Files are encrypted in your browser and the key is sealed to an OutLayer TEE enclave. If you stop checking in, your heirs open it by signing in with their email. Only a hash goes on chain." />
+    <meta name="twitter:image" content="https://morrowseal-production.up.railway.app/og.png" />
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Morrowseal","applicationCategory":"SecurityApplication","operatingSystem":"Web","url":"https://morrowseal-production.up.railway.app/","description":"Private inheritance vault on NEAR. Files are encrypted in your browser and the key is sealed to an OutLayer TEE enclave. If you stop checking in, your heirs open it by signing in with their email. Only a hash goes on chain.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Email or Google sign-in with a NEAR account (Privy)","Browser-side AES-256-GCM encryption","Key and heir list sealed to an OutLayer TEE enclave","Check-in dead-man timer with permissionless release on NEAR","Enclave verifies the heir's email before releasing the key","Heirs emailed when named and on release","Shared with me and reopen on any device","Keeper pays gas for heirs","Commitment-only on-chain storage (NEAR testnet)"]}
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/OpenRunde-Regular.woff2" as="font" type="font/woff2" crossorigin />
@@ -14,6 +30,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>Morrowseal</h1>
+      <p>A private inheritance vault on NEAR testnet. Your browser encrypts files and a letter; the key and heir list are sealed to an OutLayer TEE enclave. While you keep checking in, nothing can be opened. If you stop, the vault is released by the NEAR contract morrowseal-vault.testnet, and each heir opens it by signing in with the email you named. Only a hash, an IPFS address, an heir count and times are stored on chain. This app needs JavaScript.</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

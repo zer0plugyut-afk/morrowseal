@@ -1,16 +1,53 @@
 # Morrowseal
 
-A private inheritance vault on NEAR testnet. An owner seals files and a letter for the people they love. The decryption key is held by a secure enclave (an OutLayer worker in Intel TDX). While the owner keeps checking in, nothing can be opened. If they go silent for longer than the interval they chose, the vault is released, each heir gets one email, signs in with that email, and the files decrypt in the heir's own browser.
+A private inheritance vault on NEAR testnet with a dead-man timer. Files are encrypted in the owner's browser; the key and the heir list are sealed to an OutLayer TEE enclave. If the owner stops checking in, the vault is released on chain and each named heir opens it by signing in with their email. NEAR only ever stores a commitment, an IPFS address of ciphertext, an heir count and timestamps.
 
 - **Live app:** https://morrowseal-production.up.railway.app
 - **Network:** NEAR testnet only. Do not store real documents yet.
-- **Tracks:** `privacy` (TEE / confidential compute, private data never on chain), `realworld` (estate planning a normal family can use: email sign-in, no wallet, no seed phrase)
+- **Tracks:** `privacy` (TEE, confidential compute: plaintext and heir identities never on chain), `realworld` (estate planning a normal family can use: email or Google sign-in, no wallet, no seed phrase, heirs pay no gas)
+- **For AI reviewers:** [AGENTS.md](AGENTS.md) (features, ids, claim-to-code map) and [llms.txt](llms.txt)
 
 ![Landing](docs/screens/landing.png)
 
-## The problem
+## The stakes
 
-Passwords, crypto keys and family documents die with their owner, or they are handed over too early to a lawyer, a cloud provider or a relative. A dead-man's switch usually means trusting a company with plaintext, or putting secrets on a public chain. Morrowseal releases a secret only when the owner stops checking in, without any server, chain observer or keeper ever seeing the contents.
+Self-custody has no recovery desk. When the only person who knows a seed phrase, a password manager's master key or where the documents are dies or loses capacity, that access is usually gone for good, and the family often does not even know what existed.
+
+## Why current options fail
+
+| Option | What goes wrong |
+| --- | --- |
+| Write it down for a relative | The secret is exposed years early, and can be lost, found or misused. |
+| Lawyer, bank or custodian | A third party holds plaintext; slow, costly, and tied to one jurisdiction. |
+| Hosted dead-man's switch | The operator can read the secret and can shut down. |
+| Put it on a public chain | Everything on chain is readable forever. |
+| Multisig / social recovery | Needs heirs to run wallets and coordinate; reveals who the heirs are. |
+
+## Why NEAR-native
+
+- **Contract as the clock:** check-ins, deadlines, permissionless `release` and the claim record live in `morrowseal-vault.testnet`; nobody can stop or speed a release.
+- **Yield/resume into a TEE:** `notify`, `claim`, `heir_open` and `owner_open` call `outlayer.testnet.request_execution` and resume in a callback with the enclave's answer, so the confidential step is part of a NEAR transaction.
+- **Accounts without wallets:** every owner and heir gets a NEAR implicit account through Privy (email code or Google); the keeper funds new accounts once and pays for every heir-side transaction.
+
+## Verify it yourself
+
+| Check | How | Code |
+| --- | --- | --- |
+| The public record has no names, emails or contents | `curl https://morrowseal-production.up.railway.app/api/vaults/1` or view `get_vault` on [NearBlocks](https://testnet.nearblocks.io/address/morrowseal-vault.testnet) | `contracts/vault/src/lib.rs` `struct Vault` |
+| Release and claims are real NEAR transactions that call OutLayer | Look up the hashes in `deployments/morrowseal.json` on NearBlocks; look for `request_execution` and the `on_claim` callback | `contracts/vault/src/lib.rs` `tee`, `on_claim` |
+| The enclave checks the heir's email | Read the `claim` / `heir_open` branches | `enclave/src/main.rs`, `enclave/src/jwt.rs` `verified_email` |
+| Encryption happens in the browser | Read `buildVault` (AES-256-GCM files, ECIES-sealed manifest) | `shared/morrowseal.mjs` |
+| The running enclave is this code | Download the wasm from FastFS (URL in AGENTS.md), check its sha256 is `2eefb0e9…a71b`, and compare with the OutLayer project's active version; a local rebuild needs the same toolchain and `PRIVY_APP_ID` | `enclave/` |
+| Activity is per user | `curl .../api/activity` with no owner returns `[]` | `keeper/index.mjs` `/api/activity` |
+
+## Threat model and privacy (short)
+
+- **Chain observers** see a hash, a CID, an heir count, times, status and which NEAR account claimed. Not names, emails, titles, letters or files.
+- **IPFS** holds ciphertext only.
+- **Keeper** never sees file keys or contents. It sees heir emails after release (to send mail) and stores only an HMAC of heir emails before release (for "Shared with me").
+- **Enclave** is trusted to release a key only for a Released vault with a matching commitment, and only to a sign-in whose Privy-verified email matches the sealed one.
+- **Privy** holds users' NEAR keys and attests which emails belong to a sign-in; a compromise of Privy would undermine heir verification.
+- Full model: `docs/threat-model.md`; trust details below.
 
 ## How it works
 
