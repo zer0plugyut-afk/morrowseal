@@ -4,7 +4,7 @@
   "ops": "morrowseal-ops.testnet",
   "demo_owner": "morrowseal-demo.testnet",
   "outlayer_project": "morrowseal-ops.testnet/morrowseal",
-  "enclave_wasm_sha256": "9b1d03ac3a895ee7b4f4738493c422dea0cf2bac386c7806999ca17ba5f211a1",
+  "enclave_wasm_sha256": "2eefb0e9302e312d8e56bd43663cd602f8b2daa82eb2cd82c193b4c006b1a71b",
   "enclave_pubkey": "02c2a3119b44700420af138a0918682a074a162e7a10200c4234b5da8383cd6977",
   "txs": {
     "contract_redeploy": "Deg7HhHph42GAVSgNrzVRRKSwzqSFiqm1wjaiPFGZoXd",

@@ -197,6 +197,18 @@ fn run(input: Input) -> Result<serde_json::Value, String> {
                 "heirs": s.heirs });
             Ok(serde_json::json!({ "commitment": commitment, "key_ct": seal_to(&req.eph_pub, gift.to_string().as_bytes())? }))
         }
+        "heir_open" => {
+            let (id, commitment, s) = open_released(&input)?;
+            let i = input.heir_index.ok_or("heir_index")?;
+            let heir = s.heirs.get(i as usize).ok_or("no such heir")?;
+            let cbytes = hex::decode(input.claim_hex.as_deref().ok_or("claim_hex")?.trim_start_matches("0x")).map_err(|_| "request hex".to_string())?;
+            let cplain = ecies::decrypt(&secret_key()?, &cbytes).map_err(|_| "request decrypt failed".to_string())?;
+            let req: OwnerReq = serde_json::from_slice(&cplain).map_err(|e| format!("request json: {e}"))?;
+            let emails = jwt::verified_email(&req.id_token)?;
+            if !emails.split(',').any(|e| e == heir.email.trim().to_lowercase()) { return Err("signed-in email is not the heir's email".into()); }
+            let gift = serde_json::json!({ "vault_id": id, "owner_name": s.owner_name, "heir_name": heir.name, "message": s.message, "file_key": s.file_key, "files": s.files });
+            Ok(serde_json::json!({ "commitment": commitment, "heir_index": i, "key_ct": seal_to(&req.eph_pub, gift.to_string().as_bytes())? }))
+        }
         other => Err(format!("unknown action {other}")),
     }
 }

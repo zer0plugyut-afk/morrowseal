@@ -381,3 +381,7 @@ dd .heir-chips { justify-content: flex-start; }
 }
 .chip-muted { background: var(--surface-alt); color: var(--muted, #757170); }
 .persona { background: var(--surface-alt); }
+.claim-card.claim-wide { width: min(800px, 100%); }
+.claim-wide .gift-files, .claim-wide .letter { text-align: left; }
+.text-preview { max-height: 360px; overflow: auto; white-space: pre; overflow-wrap: normal; }
+@media (max-width: 640px) { .text-preview { max-height: 260px; } }

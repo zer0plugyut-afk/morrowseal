@@ -155,7 +155,7 @@ export function SharedWithMe() {
             <Persona name={r.owner_name || r.owner} email={r.owner} />
             <div className="grow"><div className="t">{r.owner_name ? `From ${r.owner_name}` : `Vault ${r.vault_id}`}</div><div className="s">{sub}</div></div>
             <span className={`chip ${c}`}>{l}</span>
-            {(r.status === "released" || r.status === "opened") && r.link ? <a className="btn btn-dark btn-sm" href={r.link}><LockKeyOpen size={16} /> {r.status === "opened" ? "Reopen" : "Open"}</a>
+            {(r.status === "released" || r.status === "opened") && r.link ? <a className="btn btn-dark btn-sm" href={r.status === "opened" ? `/claim/${r.vault_id}/${r.heir_index}#reopen=1` : r.link}><LockKeyOpen size={16} /> {r.status === "opened" ? "Reopen" : "Open"}</a>
               : r.status === "waiting" ? <a className="btn btn-ghost btn-sm" href={`/waiting/${r.vault_id}`}>Details</a> : null}
           </div>);
         })}</div>}

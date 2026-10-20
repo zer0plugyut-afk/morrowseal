@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { EnvelopeSimple, LockKeyOpen, DownloadSimple, FileText, CheckCircle, CircleNotch, ArrowSquareOut, Info } from "@phosphor-icons/react";
 import { Folder, useToast } from "@unlocalhosted/metalui";
 import { Logo, ThemeToggle, Reveal } from "../components/ui";
-import { buildClaim, openGift } from "@shared/morrowseal.mjs";
+import { buildClaim, buildOwnerOpen, openGift } from "@shared/morrowseal.mjs";
 import { fetchCid, relayClaim } from "../lib/api";
 import { EXPLORER, view, type Vault } from "../lib/near";
 import { authConfigured, currentUser, identityToken, signIn, signOut } from "../lib/privy";
@@ -75,6 +75,33 @@ export default function Claim() {
     }
   }
 
+  // Reopen on any device: the enclave re-checks the signed-in email against the sealed heir email
+  // and re-seals the key to a fresh one-time key in this browser. The first claim stays recorded.
+  async function reopen() {
+    setErr("");
+    try {
+      setPhase("auth");
+      const s = await signIn();
+      if (s.email) setHeirEmail(s.email);
+      const idToken = await identityToken();
+      if (!idToken) throw new Error("Sign-in did not finish. Try again.");
+      setPhase("claim");
+      const req = buildOwnerOpen({ idToken });
+      const r = await fetch("/api/reopen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ vault_id: vid, heir_index: hi, request_hex: req.requestHex }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.tx) setTx(j.tx);
+      if (!r.ok || !j.ok || !j.key_ct) throw new Error(j.error || "The enclave refused to reopen it.");
+      setPhase("open");
+      await open(req.ephSk, j.key_ct);
+    } catch (e: any) {
+      setPhase("idle");
+      const m = String(e?.message || e).replace(/^Error: /, "");
+      setErr(/not the heir's email/i.test(m) ? "WRONG_EMAIL" : m);
+    }
+  }
+  const wantReopen = useMemo(() => new URLSearchParams(location.hash.slice(1)).get("reopen") === "1", []);
+  useEffect(() => { if (wantReopen && heirEmail && vault?.claims[hi] && !localStorage.getItem(slot) && phase === "idle" && !gift && !err) reopen(); }, [wantReopen, heirEmail, vault?.id]);
+
   const download = (f: Gift["files"][number]) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([f.bytes as any], { type: f.type })); a.download = f.name; a.click(); };
   const claimed = vault?.claims[hi];
   const busy = phase === "auth" || phase === "claim" || phase === "open";
@@ -82,14 +109,14 @@ export default function Claim() {
   return (
     <div className="claim-page">
       <div style={{ position: "fixed", top: 18, left: 22, right: 22, display: "flex", justifyContent: "space-between" }}><Logo /><ThemeToggle /></div>
-      <div className="card claim-card fade-up">
+      <div className={`card claim-card fade-up ${phase === "done" && gift ? "claim-wide" : ""}`}>
         {phase === "done" && gift ? (<>
           <div style={{ display: "grid", placeItems: "center" }}><Folder name={gift.owner_name ? `From ${gift.owner_name}` : "For you"} count={gift.files.length + 1} hue="green" open peeks={[{ thumb: "linear-gradient(135deg,#d6f5e4,#0ea158)" }, { thumb: "#e2ecf5" }, { thumb: "#fff" }]} /></div>
           <h1><Reveal text={`${gift.heir_name ? gift.heir_name + ", this" : "This"} is what ${gift.owner_name || "they"} left you`} step={50} /></h1>
           {gift.message && <div className="letter">{gift.message}</div>}
           <div className="gift-files">{gift.files.map((f, k) => (
             <div key={k} className="file-row"><FileText size={20} /><div style={{ flex: 1, minWidth: 0 }}><div className="fname" style={{ fontWeight: 600 }} title={f.name}>{f.name}</div><div className="muted" style={{ fontSize: 13 }}>{(f.size / 1024).toFixed(1)} KB · decrypted here</div></div><button className="btn btn-dark btn-sm" onClick={() => download(f)}><DownloadSimple size={16} /> Save</button></div>))}</div>
-          {gift.files.some((f) => f.type.startsWith("text/")) && <div className="letter mono" style={{ fontSize: 13 }}>{new TextDecoder().decode(gift.files.find((f) => f.type.startsWith("text/"))!.bytes).slice(0, 1200)}</div>}
+          {gift.files.some((f) => f.type.startsWith("text/")) && <div className="letter mono text-preview" style={{ fontSize: 13 }}>{new TextDecoder().decode(gift.files.find((f) => f.type.startsWith("text/"))!.bytes).slice(0, 20000)}</div>}
           <p style={{ fontSize: 13, marginTop: 18 }}>Nothing was decrypted on a server. {tx && <a className="link" href={`${EXPLORER}/txns/${tx}`} target="_blank" rel="noreferrer">Claim transaction <ArrowSquareOut size={12} /></a>}</p>
         </>) : (<>
           <div style={{ display: "grid", placeItems: "center" }}><Folder name="For you" count={3} hue="blue" open={busy} peeks={[{ thumb: "linear-gradient(135deg,#cfe8ff,#0953ff)" }, { thumb: "#e2ecf5" }, { thumb: "linear-gradient(160deg,#1a1615,#453f3d)" }]} /></div>
@@ -109,7 +136,12 @@ export default function Claim() {
           ) : vault.status === "Cancelled" ? (
             <div className="banner" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> This vault was closed by its owner.</div>
           ) : claimed && !localStorage.getItem(slot) ? (
-            <div className="banner" style={{ marginTop: 22, textAlign: "left" }}><CheckCircle size={20} /> This share was already opened{claimed.verified_email ? " by a verified email sign-in" : ""}. If that was you, open it on the same browser.</div>
+            <div className="claim-actions">
+              <div className="banner" style={{ textAlign: "left" }}><CheckCircle size={20} /> <div>Already opened{claimed.verified_email ? " by a verified email sign-in" : ""}. Signed in as <b title={heirEmail}>{heirEmail}</b>, you can open it again here.</div></div>
+              <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => reopen()}>{busy ? <CircleNotch size={18} className="spin" /> : <LockKeyOpen size={18} weight="bold" />} Open it again</button>
+              {phase === "claim" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> The enclave is checking your email…</p>}
+              {phase === "open" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> Decrypting in your browser…</p>}
+            </div>
           ) : !token ? (
             <div className="banner warn" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> This link is missing its private part. Open the button in your email again.</div>
           ) : (

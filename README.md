@@ -72,7 +72,7 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 | Vault contract | `morrowseal-vault.testnet` (Rust, near-sdk 5.17, crate v0.1.0) |
 | Admin / keeper account | `morrowseal-ops.testnet` |
 | OutLayer project | `morrowseal-ops.testnet/morrowseal` (enclave crate v0.1.0, `wasm32-wasip2`) |
-| Enclave wasm sha256 | `9b1d03ac3a895ee7b4f4738493c422dea0cf2bac386c7806999ca17ba5f211a1` |
+| Enclave wasm sha256 | `2eefb0e9302e312d8e56bd43663cd602f8b2daa82eb2cd82c193b4c006b1a71b` |
 | Enclave public key | `02c2a3119b44700420af138a0918682a074a162e7a10200c4234b5da8383cd6977` |
 | Demo owner | `morrowseal-demo.testnet` |
 | Transactions | every create / release / notify / claim hash is in `deployments/morrowseal.json` |
@@ -80,8 +80,8 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 ## NEAR-native components
 
 - **NEAR smart contract** (`contracts/vault`): vaults, check-ins, permissionless release, claims, event log, views.
-- **OutLayer TEE** (`enclave/`): confidential compute for `notify`, `claim` and `owner_open`, with an on-chain result.
-- **Yield/resume:** the contract calls `outlayer.testnet.request_execution` and resumes in `on_notify` / `on_claim` / `on_owner_open` callbacks with the enclave's answer.
+- **OutLayer TEE** (`enclave/`): confidential compute for `notify`, `claim`, `heir_open` and `owner_open`, with an on-chain result.
+- **Yield/resume:** the contract calls `outlayer.testnet.request_execution` and resumes in `on_notify` / `on_claim` / `on_heir_open` / `on_owner_open` callbacks with the enclave's answer.
 - **Privy NEAR accounts:** every owner and heir gets a NEAR testnet implicit account (Privy extended-chain wallet, `chainType: near`, signed with raw-hash signing), topped up once by the keeper. No wallet extension, no seed phrase.
 
 ## Judge walkthrough (do X - see Y)
@@ -95,7 +95,7 @@ All against https://morrowseal-production.up.railway.app. Steps 1-4 need no sign
 5. **Sign in** (email code or Google) - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
 6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
 7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
-8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened* and can be reopened from the same browser.
+8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened*; **Reopen** works on any device or browser after signing in with the heir email.
 9. **Open Activity** (as owner or heir) - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
 
 | Workspace | Create | Claim |
@@ -139,6 +139,6 @@ Build and test the Rust parts:
 - Testnet only; one enclave deployment and one keeper. If OutLayer is unavailable, released vaults wait until it returns (see `docs/threat-model.md`).
 - The keeper sees heir emails after release (it must send mail) and an HMAC of heir emails at seal time. It never sees file keys or contents.
 - "Shared with me" for still-waiting vaults relies on the seal-time hint the owner's browser sends; it is confirmed from the enclave's notice once released. Vaults sealed before this index existed appear only after release.
-- A share can be claimed once (on chain). Reopening works in the browser that claimed it; another device shows it as already opened.
+- The first claim of each share is recorded on chain once. After that the heir can reopen it any number of times, on any device, by signing in with the named email (`heir_open`: the enclave re-checks the email and re-seals the key to that browser). Each reopen is a relayed TEE call paid by the keeper.
 - Privy holds users' NEAR keys; the enclave trusts Privy's verified-email answer.
 - Vault titles live in the owner's browser; another device shows "Vault N".

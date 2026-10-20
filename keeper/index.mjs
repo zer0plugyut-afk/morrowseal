@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { account } from "./chain.mjs";
 import { pin, fetchCid } from "./ipfs.mjs";
-import { tick, relayClaim } from "./lib.mjs";
+import { tick, relayClaim, relayReopen } from "./lib.mjs";
 import { fund, privyUser, privyEmails } from "./fund.mjs";
 import { indexNamed, indexNotice, sharedWith, claimLink, record, keeperEvents } from "./heirs.mjs";
 import { fresh, ownerIds } from "./index-cache.mjs";
@@ -145,6 +145,13 @@ http.createServer(async (req, res) => {
       const n = out.filter((x) => x === "sent").length;
       if (n) record("heirs_named", j.vault_id, n === 1 ? "1 heir told they were named" : `${n} heirs told they were named`);
       return json(res, 200, { results: out });
+    }
+    if (url.pathname === "/api/reopen" && req.method === "POST") {
+      if (limited(req, 6)) return json(res, 429, { error: "Too many attempts, wait a minute." });
+      const j = JSON.parse((await body(req, 64 * 1024)).toString());
+      if (!Number.isInteger(j.vault_id) || !Number.isInteger(j.heir_index) || !/^[0-9a-f]+$/i.test(j.request_hex || "")) return json(res, 400, { error: "bad request" });
+      const r = await relayReopen(ops, j);
+      return json(res, r.ok ? 200 : 422, r);
     }
     if (url.pathname === "/api/claim" && req.method === "POST") {
       if (limited(req, 6)) return json(res, 429, { error: "Too many attempts, wait a minute." });

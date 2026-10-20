@@ -225,6 +225,32 @@ impl Morrowseal {
         self.tee(input).then(Self::ext(env::current_account_id()).with_static_gas(CALLBACK_GAS).on_owner_open(digest))
     }
 
+    /// Heir reopen: after the first claim is recorded, a named heir can open the vault again on any
+    /// device. The enclave checks the heir's sign-in email against the sealed heir email and re-seals
+    /// the key to the new one-time browser key. Nothing is stored; the first claim stays as recorded.
+    #[payable]
+    pub fn heir_open(&mut self, vault_id: u64, heir_index: u32, ciphertext_hex: String, request_hex: String) -> Promise {
+        require!(env::attached_deposit() >= MIN_TEE_DEPOSIT, "attach >= 0.02 NEAR for OutLayer");
+        let digest = hex::encode(env::sha256(&hex::decode(ciphertext_hex.trim_start_matches("0x")).expect("hex")));
+        let v = self.vaults.get(&vault_id).expect("no vault");
+        require!(v.status == Status::Released, "vault not released");
+        require!(digest == v.commitment, "ciphertext does not match commitment");
+        require!((heir_index as usize) < v.claims.len(), "no such heir");
+        require!(v.claims[heir_index as usize].is_some(), "claim first");
+        let input = json!({"action":"heir_open","vault_id":vault_id,"heir_index":heir_index,
+            "ciphertext_hex":ciphertext_hex.trim_start_matches("0x"),"claim_hex":request_hex.trim_start_matches("0x")});
+        self.tee(input).then(Self::ext(env::current_account_id()).with_static_gas(CALLBACK_GAS).on_heir_open(digest, heir_index))
+    }
+
+    #[private]
+    pub fn on_heir_open(&mut self, commitment: String, heir_index: u32, #[callback_result] result: Result<Option<serde_json::Value>, PromiseError>) -> serde_json::Value {
+        match Self::tee_result(result) {
+            Ok(r) if r["commitment"].as_str() == Some(commitment.as_str()) && r["heir_index"].as_u64() == Some(heir_index as u64) => json!({"ok":true,"key_ct":r["key_ct"]}),
+            Ok(_) => json!({"ok":false,"error":"stale result"}),
+            Err(e) => json!({"ok":false,"error":e}),
+        }
+    }
+
     #[private]
     pub fn on_owner_open(&mut self, commitment: String, #[callback_result] result: Result<Option<serde_json::Value>, PromiseError>) -> serde_json::Value {
         match Self::tee_result(result) {
