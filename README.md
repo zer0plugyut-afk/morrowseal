@@ -11,6 +11,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 ## Contents
 
+- [Judge walkthrough (do X - see Y)](#judge-walkthrough-do-x---see-y)
 - [The stakes](#the-stakes)
 - [Why current options fail](#why-current-options-fail)
 - [Why NEAR-native](#why-near-native)
@@ -22,10 +23,27 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 - [Trust model](#trust-model)
 - [Deployed ids and versions](#deployed-ids-and-versions)
 - [NEAR-native components](#near-native-components)
-- [Judge walkthrough (do X - see Y)](#judge-walkthrough-do-x---see-y)
 - [Repo](#repo)
 - [Run locally](#run-locally)
 - [Limitations](#limitations)
+
+## Judge walkthrough (do X - see Y)
+
+All against https://morrowseal-production.up.railway.app. Steps 1-4 need no sign-in.
+
+1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
+2. **Open `/app?watch=morrowseal-demo.testnet`** - see a read-only workspace with released/opened demo vaults. Click one - see its timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
+3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
+4. **`curl https://morrowseal-production.up.railway.app/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
+5. **Sign in** (email code or Google) - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
+6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
+7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
+8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened*; **Reopen** works on any device or browser after signing in with the heir email.
+9. **Open Activity** (as owner or heir) - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
+
+| Workspace | Create | Claim |
+| --- | --- | --- |
+| ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
 
 ## The stakes
 
@@ -138,24 +156,6 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 - **OutLayer TEE** (`enclave/`): confidential compute for `notify`, `claim`, `heir_open` and `owner_open`, with an on-chain result.
 - **Yield/resume:** the contract calls `outlayer.testnet.request_execution` and resumes in `on_notify` / `on_claim` / `on_heir_open` / `on_owner_open` callbacks with the enclave's answer.
 - **Privy NEAR accounts:** every owner and heir gets a NEAR testnet implicit account (Privy extended-chain wallet, `chainType: near`, signed with raw-hash signing), topped up once by the keeper. No wallet extension, no seed phrase.
-
-## Judge walkthrough (do X - see Y)
-
-All against https://morrowseal-production.up.railway.app. Steps 1-4 need no sign-in.
-
-1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
-2. **Open `/app?watch=morrowseal-demo.testnet`** - see a read-only workspace with released/opened demo vaults. Click one - see its timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
-3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
-4. **`curl https://morrowseal-production.up.railway.app/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
-5. **Sign in** (email code or Google) - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
-6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
-7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
-8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened*; **Reopen** works on any device or browser after signing in with the heir email.
-9. **Open Activity** (as owner or heir) - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
-
-| Workspace | Create | Claim |
-| --- | --- | --- |
-| ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
 
 ## Repo
 
