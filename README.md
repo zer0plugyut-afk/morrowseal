@@ -12,6 +12,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 ## Contents
 
 - [Judge walkthrough (do X - see Y)](#judge-walkthrough-do-x---see-y)
+- [Hackathon](#hackathon)
 - [The stakes](#the-stakes)
 - [Why current options fail](#why-current-options-fail)
 - [Why NEAR-native](#why-near-native)
@@ -44,6 +45,16 @@ All against https://morrowseal-production.up.railway.app. Steps 1-4 need no sign
 | Workspace | Create | Claim |
 | --- | --- | --- |
 | ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
+
+## Hackathon
+
+Built at NEAR HACKATHON 2026. Tracks:
+
+- `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
+- `privacy` (on chain) - `notify`, `claim`, `heir_open` and `owner_open` call `outlayer.testnet.request_execution` (yield/resume), so each confidential step is part of a NEAR transaction; the enclave releases a key only to a sign-in whose Privy-verified email matches the sealed heir email.
+- `realworld` - estate planning a normal family can use: email or Google sign-in, no wallet, no seed phrase, heirs pay no gas.
+
+Demo post: (added on Nov 1)
 
 ## The stakes
 
