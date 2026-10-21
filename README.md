@@ -4,7 +4,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 - **Live app:** https://morrowseal-production.up.railway.app
 - **Network:** NEAR testnet only. Do not store real documents yet.
-- **Tracks:** `privacy` (TEE, confidential compute: plaintext and heir identities never on chain), `realworld` (estate planning a normal family can use: email or Google sign-in, no wallet, no seed phrase, heirs pay no gas)
+- **Track:** `privacy` (TEE, confidential compute: plaintext and heir identities never on chain)
 - **For AI reviewers:** [AGENTS.md](AGENTS.md) (features, ids, claim-to-code map) and [llms.txt](llms.txt)
 
 ![Landing](docs/screens/landing.png)
@@ -48,11 +48,9 @@ All against https://morrowseal-production.up.railway.app. Steps 1-4 need no sign
 
 ## Hackathon
 
-Built at NEAR HACKATHON 2026. Tracks:
+Built at NEAR HACKATHON 2026. Track:
 
-- `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
-- `privacy` (on chain) - `notify`, `claim`, `heir_open` and `owner_open` call `outlayer.testnet.request_execution` (yield/resume), so each confidential step is part of a NEAR transaction; the enclave releases a key only to a sign-in whose Privy-verified email matches the sealed heir email.
-- `realworld` - estate planning a normal family can use: email or Google sign-in, no wallet, no seed phrase, heirs pay no gas.
+- `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; `notify`, `claim`, `heir_open` and `owner_open` run it via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions, and it releases a key only to a sign-in whose Privy-verified email matches the sealed heir email; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
 
 Demo post: (added on Nov 1)
 
