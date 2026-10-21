@@ -52,8 +52,6 @@ Built at NEAR HACKATHON 2026. Track:
 
 - `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; `notify`, `claim`, `heir_open` and `owner_open` run it via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions, and it releases a key only to a sign-in whose Privy-verified email matches the sealed heir email; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
 
-Demo post: (added on Nov 1)
-
 ## The stakes
 
 Self-custody has no recovery desk. When the only person who knows a seed phrase, a password manager's master key or where the documents are dies or loses capacity, that access is usually gone for good, and the family often does not even know what existed.
