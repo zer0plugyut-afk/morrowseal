@@ -11,6 +11,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 ## Contents
 
+- [Demo video](#demo-video)
 - [Judge walkthrough (do X - see Y)](#judge-walkthrough-do-x---see-y)
 - [Hackathon](#hackathon)
 - [The stakes](#the-stakes)
@@ -27,6 +28,12 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 - [Repo](#repo)
 - [Run locally](#run-locally)
 - [Limitations](#limitations)
+
+## Demo video
+
+[![Morrowseal demo](docs/demo-thumb.jpg)](docs/demo.mp4)
+
+[Watch the demo (3:30, with narration)](docs/demo.mp4)
 
 ## Judge walkthrough (do X - see Y)
 
