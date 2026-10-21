@@ -9,6 +9,24 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 ![Landing](docs/screens/landing.png)
 
+## Contents
+
+- [The stakes](#the-stakes)
+- [Why current options fail](#why-current-options-fail)
+- [Why NEAR-native](#why-near-native)
+- [Verify it yourself](#verify-it-yourself)
+- [Threat model and privacy (short)](#threat-model-and-privacy-short)
+- [How it works](#how-it-works)
+- [Architecture](#architecture)
+- [What is private vs public](#what-is-private-vs-public)
+- [Trust model](#trust-model)
+- [Deployed ids and versions](#deployed-ids-and-versions)
+- [NEAR-native components](#near-native-components)
+- [Judge walkthrough (do X - see Y)](#judge-walkthrough-do-x---see-y)
+- [Repo](#repo)
+- [Run locally](#run-locally)
+- [Limitations](#limitations)
+
 ## The stakes
 
 Self-custody has no recovery desk. When the only person who knows a seed phrase, a password manager's master key or where the documents are dies or loses capacity, that access is usually gone for good, and the family often does not even know what existed.
