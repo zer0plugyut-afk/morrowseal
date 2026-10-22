@@ -13,13 +13,13 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 - [The stakes](#the-stakes)
 - [Why current options fail](#why-current-options-fail)
+- [Evaluate it in ten minutes (do X - see Y)](#evaluate-it-in-ten-minutes-do-x---see-y)
 - [Life of a vault](#life-of-a-vault)
 - [Architecture](#architecture)
 - [What is private vs public](#what-is-private-vs-public)
 - [Why it has to be NEAR](#why-it-has-to-be-near)
 - [NEAR-native components](#near-native-components)
 - [Hackathon track: privacy](#hackathon-track-privacy)
-- [Evaluate it in ten minutes](#evaluate-it-in-ten-minutes)
 - [Verify it yourself](#verify-it-yourself)
 - [Threat model (short)](#threat-model-short)
 - [Trust model](#trust-model)
@@ -41,6 +41,24 @@ Self-custody has no recovery desk. When the only person who knows a seed phrase,
 | Hosted dead-man's switch | The operator can read the secret and can shut down. |
 | Put it on a public chain | Everything on chain is readable forever. |
 | Multisig / social recovery | Needs heirs to run wallets and coordinate; reveals who the heirs are. |
+
+## Evaluate it in ten minutes (do X - see Y)
+
+All against `<APP_URL>` (the link in the submission form) or a local run at `http://localhost:3000`. Steps 1-4 need no sign-in.
+
+1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
+2. **Open `/app?watch=morrowseal-demo.testnet` and click a vault** - see a read-only workspace with released/opened demo vaults and the clicked vault's timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
+3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
+4. **`curl <APP_URL>/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
+5. **Sign in (email code or Google)** - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
+6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
+7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
+8. **Click Open (from the email or Shared with me)** - see the enclave check the email and the letter and files decrypt in the browser. The row becomes *Opened*; Reopen works on any device or browser after signing in with the heir email.
+9. **Open Activity (as owner or heir)** - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
+
+| Workspace | Create | Claim |
+| --- | --- | --- |
+| ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
 
 ## Life of a vault
 
@@ -105,24 +123,6 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 Built at NEAR HACKATHON 2026. Track:
 
 - `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; `notify`, `claim`, `heir_open` and `owner_open` run it via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions, and it releases a key only to a sign-in whose Privy-verified email matches the sealed heir email; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
-
-## Evaluate it in ten minutes
-
-All against `<APP_URL>` (the link in the submission form) or a local run at `http://localhost:3000`. Steps 1-4 need no sign-in.
-
-1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
-2. **Open `/app?watch=morrowseal-demo.testnet`** - see a read-only workspace with released/opened demo vaults. Click one - see its timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
-3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
-4. **`curl <APP_URL>/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
-5. **Sign in** (email code or Google) - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
-6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
-7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
-8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened*; **Reopen** works on any device or browser after signing in with the heir email.
-9. **Open Activity** (as owner or heir) - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
-
-| Workspace | Create | Claim |
-| --- | --- | --- |
-| ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
 
 ## Verify it yourself
 
