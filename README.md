@@ -2,7 +2,7 @@
 
 A private inheritance vault on NEAR testnet with a dead-man timer. Files are encrypted in the owner's browser; the key and the heir list are sealed to an OutLayer TEE enclave. If the owner stops checking in, the vault is released on chain and each named heir opens it by signing in with their email. NEAR only ever stores a commitment, an IPFS address of ciphertext, an heir count and timestamps.
 
-- **Live app:** https://morrowseal-production.up.railway.app
+- **Try it:** the deployed app link is in the submission form (`<APP_URL>` below), or [run it locally](#run-locally) at `http://localhost:3000`.
 - **Network:** NEAR testnet only. Do not store real documents yet.
 - **Track:** `privacy` (TEE, confidential compute: plaintext and heir identities never on chain)
 - **For AI reviewers:** [AGENTS.md](AGENTS.md) (features, ids, claim-to-code map) and [llms.txt](llms.txt)
@@ -11,53 +11,22 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 ## Contents
 
-- [Demo video](#demo-video)
-- [Judge walkthrough (do X - see Y)](#judge-walkthrough-do-x---see-y)
-- [Hackathon](#hackathon)
 - [The stakes](#the-stakes)
 - [Why current options fail](#why-current-options-fail)
-- [Why NEAR-native](#why-near-native)
-- [Verify it yourself](#verify-it-yourself)
-- [Threat model and privacy (short)](#threat-model-and-privacy-short)
-- [How it works](#how-it-works)
+- [Life of a vault](#life-of-a-vault)
 - [Architecture](#architecture)
 - [What is private vs public](#what-is-private-vs-public)
+- [Why it has to be NEAR](#why-it-has-to-be-near)
+- [NEAR-native components](#near-native-components)
+- [Hackathon track: privacy](#hackathon-track-privacy)
+- [Evaluate it in ten minutes](#evaluate-it-in-ten-minutes)
+- [Verify it yourself](#verify-it-yourself)
+- [Threat model (short)](#threat-model-short)
 - [Trust model](#trust-model)
 - [Deployed ids and versions](#deployed-ids-and-versions)
-- [NEAR-native components](#near-native-components)
 - [Repo](#repo)
 - [Run locally](#run-locally)
 - [Limitations](#limitations)
-
-## Demo video
-
-[![Morrowseal demo](docs/demo-thumb.jpg)](docs/demo.mp4)
-
-[Watch the demo (3:30, with narration)](docs/demo.mp4)
-
-## Judge walkthrough (do X - see Y)
-
-All against https://morrowseal-production.up.railway.app. Steps 1-4 need no sign-in.
-
-1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
-2. **Open `/app?watch=morrowseal-demo.testnet`** - see a read-only workspace with released/opened demo vaults. Click one - see its timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
-3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
-4. **`curl https://morrowseal-production.up.railway.app/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
-5. **Sign in** (email code or Google) - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
-6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
-7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
-8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened*; **Reopen** works on any device or browser after signing in with the heir email.
-9. **Open Activity** (as owner or heir) - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
-
-| Workspace | Create | Claim |
-| --- | --- | --- |
-| ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
-
-## Hackathon
-
-Built at NEAR HACKATHON 2026. Track:
-
-- `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; `notify`, `claim`, `heir_open` and `owner_open` run it via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions, and it releases a key only to a sign-in whose Privy-verified email matches the sealed heir email; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
 
 ## The stakes
 
@@ -73,33 +42,7 @@ Self-custody has no recovery desk. When the only person who knows a seed phrase,
 | Put it on a public chain | Everything on chain is readable forever. |
 | Multisig / social recovery | Needs heirs to run wallets and coordinate; reveals who the heirs are. |
 
-## Why NEAR-native
-
-- **Contract as the clock:** check-ins, deadlines, permissionless `release` and the claim record live in `morrowseal-vault.testnet`; nobody can stop or speed a release.
-- **Yield/resume into a TEE:** `notify`, `claim`, `heir_open` and `owner_open` call `outlayer.testnet.request_execution` and resume in a callback with the enclave's answer, so the confidential step is part of a NEAR transaction.
-- **Accounts without wallets:** every owner and heir gets a NEAR implicit account through Privy (email code or Google); the keeper funds new accounts once and pays for every heir-side transaction.
-
-## Verify it yourself
-
-| Check | How | Code |
-| --- | --- | --- |
-| The public record has no names, emails or contents | `curl https://morrowseal-production.up.railway.app/api/vaults/1` or view `get_vault` on [NearBlocks](https://testnet.nearblocks.io/address/morrowseal-vault.testnet) | `contracts/vault/src/lib.rs` `struct Vault` |
-| Release and claims are real NEAR transactions that call OutLayer | Look up the hashes in `deployments/morrowseal.json` on NearBlocks; look for `request_execution` and the `on_claim` callback | `contracts/vault/src/lib.rs` `tee`, `on_claim` |
-| The enclave checks the heir's email | Read the `claim` / `heir_open` branches | `enclave/src/main.rs`, `enclave/src/jwt.rs` `verified_email` |
-| Encryption happens in the browser | Read `buildVault` (AES-256-GCM files, ECIES-sealed manifest) | `shared/morrowseal.mjs` |
-| The running enclave is this code | Download the wasm from FastFS (URL in AGENTS.md), check its sha256 is `2eefb0e9…a71b`, and compare with the OutLayer project's active version; a local rebuild needs the same toolchain and `PRIVY_APP_ID` | `enclave/` |
-| Activity is per user | `curl .../api/activity` with no owner returns `[]` | `keeper/index.mjs` `/api/activity` |
-
-## Threat model and privacy (short)
-
-- **Chain observers** see a hash, a CID, an heir count, times, status and which NEAR account claimed. Not names, emails, titles, letters or files.
-- **IPFS** holds ciphertext only.
-- **Keeper** never sees file keys or contents. It sees heir emails after release (to send mail) and stores only an HMAC of heir emails before release (for "Shared with me").
-- **Enclave** is trusted to release a key only for a Released vault with a matching commitment, and only to a sign-in whose Privy-verified email matches the sealed one.
-- **Privy** holds users' NEAR keys and attests which emails belong to a sign-in; a compromise of Privy would undermine heir verification.
-- Full model: `docs/threat-model.md`; trust details below.
-
-## How it works
+## Life of a vault
 
 | Stage | What happens | Where |
 | --- | --- | --- |
@@ -144,6 +87,63 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 | Who claimed | heir's NEAR implicit account + "email verified" flag | — | — | — |
 | Times, status, check-ins | yes | — | yes | — |
 
+## Why it has to be NEAR
+
+- **Contract as the clock:** check-ins, deadlines, permissionless `release` and the claim record live in `morrowseal-vault.testnet`; nobody can stop or speed a release.
+- **Yield/resume into a TEE:** `notify`, `claim`, `heir_open` and `owner_open` call `outlayer.testnet.request_execution` and resume in a callback with the enclave's answer, so the confidential step is part of a NEAR transaction.
+- **Accounts without wallets:** every owner and heir gets a NEAR implicit account through Privy (email code or Google); the keeper funds new accounts once and pays for every heir-side transaction.
+
+## NEAR-native components
+
+- **NEAR smart contract** (`contracts/vault`): vaults, check-ins, permissionless release, claims, event log, views.
+- **OutLayer TEE** (`enclave/`): confidential compute for `notify`, `claim`, `heir_open` and `owner_open`, with an on-chain result.
+- **Yield/resume:** the contract calls `outlayer.testnet.request_execution` and resumes in `on_notify` / `on_claim` / `on_heir_open` / `on_owner_open` callbacks with the enclave's answer.
+- **Privy NEAR accounts:** every owner and heir gets a NEAR testnet implicit account (Privy extended-chain wallet, `chainType: near`, signed with raw-hash signing), topped up once by the keeper. No wallet extension, no seed phrase.
+
+## Hackathon track: privacy
+
+Built at NEAR HACKATHON 2026. Track:
+
+- `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; `notify`, `claim`, `heir_open` and `owner_open` run it via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions, and it releases a key only to a sign-in whose Privy-verified email matches the sealed heir email; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
+
+## Evaluate it in ten minutes
+
+All against `<APP_URL>` (the link in the submission form) or a local run at `http://localhost:3000`. Steps 1-4 need no sign-in.
+
+1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
+2. **Open `/app?watch=morrowseal-demo.testnet`** - see a read-only workspace with released/opened demo vaults. Click one - see its timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
+3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
+4. **`curl <APP_URL>/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
+5. **Sign in** (email code or Google) - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
+6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
+7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
+8. **Click Open (from the email or Shared with me)** - the enclave checks the email; the letter and files decrypt in the browser. The row becomes *Opened*; **Reopen** works on any device or browser after signing in with the heir email.
+9. **Open Activity** (as owner or heir) - see only your own events: created, check-ins, released, heirs notified, claims you made, cancelled; times in your local timezone.
+
+| Workspace | Create | Claim |
+| --- | --- | --- |
+| ![Workspace](docs/screens/workspace.png) | ![Create](docs/screens/create.png) | ![Claim](docs/screens/claim.png) |
+
+## Verify it yourself
+
+| Check | How | Code |
+| --- | --- | --- |
+| The public record has no names, emails or contents | `curl <APP_URL>/api/vaults/1` or view `get_vault` on [NearBlocks](https://testnet.nearblocks.io/address/morrowseal-vault.testnet) | `contracts/vault/src/lib.rs` `struct Vault` |
+| Release and claims are real NEAR transactions that call OutLayer | Look up the hashes in `deployments/morrowseal.json` on NearBlocks; look for `request_execution` and the `on_claim` callback | `contracts/vault/src/lib.rs` `tee`, `on_claim` |
+| The enclave checks the heir's email | Read the `claim` / `heir_open` branches | `enclave/src/main.rs`, `enclave/src/jwt.rs` `verified_email` |
+| Encryption happens in the browser | Read `buildVault` (AES-256-GCM files, ECIES-sealed manifest) | `shared/morrowseal.mjs` |
+| The running enclave is this code | Download the wasm from FastFS (URL in AGENTS.md), check its sha256 is `2eefb0e9…a71b`, and compare with the OutLayer project's active version; a local rebuild needs the same toolchain and `PRIVY_APP_ID` | `enclave/` |
+| Activity is per user | `curl .../api/activity` with no owner returns `[]` | `keeper/index.mjs` `/api/activity` |
+
+## Threat model (short)
+
+- **Chain observers** see a hash, a CID, an heir count, times, status and which NEAR account claimed. Not names, emails, titles, letters or files.
+- **IPFS** holds ciphertext only.
+- **Keeper** never sees file keys or contents. It sees heir emails after release (to send mail) and stores only an HMAC of heir emails before release (for "Shared with me").
+- **Enclave** is trusted to release a key only for a Released vault with a matching commitment, and only to a sign-in whose Privy-verified email matches the sealed one.
+- **Privy** holds users' NEAR keys and attests which emails belong to a sign-in; a compromise of Privy would undermine heir verification.
+- Full model: `docs/threat-model.md`; trust details below.
+
 ## Trust model
 
 - **Enclave (OutLayer TDX):** holds the master secret (`PROTECTED_MORROWSEAL_MASTER`, generated inside the TEE). Trusted to release a file key only for a Released vault whose commitment matches, and only to a sign-in whose Privy-verified email equals the sealed heir email.
@@ -163,13 +163,6 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 | Enclave public key | `02c2a3119b44700420af138a0918682a074a162e7a10200c4234b5da8383cd6977` |
 | Demo owner | `morrowseal-demo.testnet` |
 | Transactions | every create / release / notify / claim hash is in `deployments/morrowseal.json` |
-
-## NEAR-native components
-
-- **NEAR smart contract** (`contracts/vault`): vaults, check-ins, permissionless release, claims, event log, views.
-- **OutLayer TEE** (`enclave/`): confidential compute for `notify`, `claim`, `heir_open` and `owner_open`, with an on-chain result.
-- **Yield/resume:** the contract calls `outlayer.testnet.request_execution` and resumes in `on_notify` / `on_claim` / `on_heir_open` / `on_owner_open` callbacks with the enclave's answer.
-- **Privy NEAR accounts:** every owner and heir gets a NEAR testnet implicit account (Privy extended-chain wallet, `chainType: near`, signed with raw-hash signing), topped up once by the keeper. No wallet extension, no seed phrase.
 
 ## Repo
 

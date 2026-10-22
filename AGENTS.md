@@ -53,7 +53,7 @@ Web app --reads only /api/* (keeper read model + /api/rpc proxy)--> keeper
 | OutLayer project | `morrowseal-ops.testnet/morrowseal` | — |
 | Enclave wasm (sha256) | `2eefb0e9302e312d8e56bd43663cd602f8b2daa82eb2cd82c193b4c006b1a71b` | https://test.fastfs.io/morrowseal-ops.testnet/outlayer.testnet/2eefb0e9302e312d8e56bd43663cd602f8b2daa82eb2cd82c193b4c006b1a71b.wasm |
 | Enclave public key | `02c2a3119b44700420af138a0918682a074a162e7a10200c4234b5da8383cd6977` | `get_config` on the contract |
-| Live app | https://morrowseal-production.up.railway.app | `/api/health` |
+| App | `<APP_URL>` (link in the submission form) or `http://localhost:3000` locally | `/api/health` |
 
 Transaction hashes for verified runs: `deployments/morrowseal.json`.
 

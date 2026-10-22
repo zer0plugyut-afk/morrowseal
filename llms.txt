@@ -9,7 +9,7 @@ Key facts:
 - Enclave: OutLayer project morrowseal-ops.testnet/morrowseal, wasm sha256 2eefb0e9302e312d8e56bd43663cd602f8b2daa82eb2cd82c193b4c006b1a71b
 - NEAR features: smart contract, OutLayer TEE via yield/resume (request_execution + callbacks), Privy-held NEAR implicit accounts
 - Features: Privy email/Google sign-in, 5-step sealing, heirs emailed at seal and on release, check-in dead-man timer, enclave verifies heir email, Shared with me, reopen on any device, keeper-paid gas for heirs, owner preview
-- Live: https://morrowseal-production.up.railway.app
+- App: `<APP_URL>` (link in the submission form) or `http://localhost:3000` locally
 
 ## Docs
 - [AGENTS.md](AGENTS.md): features, architecture, ids, claim-to-code map
