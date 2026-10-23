@@ -1,10 +1,10 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, HandHeart, SignOut, EnvelopeSimple, Copy, ArrowSquareOut } from "@phosphor-icons/react";
+import { Vault, PlusCircle, UsersThree, Heartbeat, ClockCounterClockwise, ShieldCheck, GearSix, HandHeart, SignOut, EnvelopeSimple, Copy, ArrowSquareOut, CaretDown } from "@phosphor-icons/react";
 import { Logo, ThemeToggle } from "../components/ui";
 import { Persona } from "../components/Persona";
 import { useApp } from "./state";
 import { short } from "../lib/format";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@unlocalhosted/metalui";
 import { balanceOf } from "../lib/privy";
 
@@ -25,22 +25,26 @@ export default function Shell() {
   const overdue = vaults.filter((v) => v.status === "Active").length;
   return (
     <div className="shell">
-      <aside className="side">
-        <Logo to="/" />
-        {NAV.map(({ to, icon: I, label, end }) => (
-          <NavLink key={to} to={to} end={end} className={({ isActive }) => `side-link ${isActive ? "active" : ""}`}>
-            {({ isActive }) => (<><I size={20} weight={isActive ? "fill" : "regular"} />{label}{label === "Check-ins" && overdue > 0 ? <span className="badge">{overdue}</span> : null}</>)}
-          </NavLink>
-        ))}
-        <div className="side-foot">
-          <div style={{ display: "flex", gap: 8 }}><ThemeToggle /></div>
-          {!ready ? <span className="skel-line" style={{ width: 120, height: 34 }} /> : account ? (
-            <AccountCard account={account} email={watch ? null : email} watch={watch} onLogout={logout} />
-          ) : (
-            <button className="btn btn-dark btn-sm" onClick={login}><EnvelopeSimple size={16} /> Sign in</button>
-          )}
+      <header className="topnav">
+        <div className="topnav-bar">
+          <Logo to="/" />
+          <nav className="topnav-links" aria-label="App">
+            {NAV.map(({ to, icon: I, label, end }) => (
+              <NavLink key={to} to={to} end={end} className={({ isActive }) => `side-link ${isActive ? "active" : ""}`}>
+                {({ isActive }) => (<><I size={18} weight={isActive ? "fill" : "regular"} />{label}{label === "Check-ins" && overdue > 0 ? <span className="badge">{overdue}</span> : null}</>)}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="topnav-end">
+            <ThemeToggle />
+            {!ready ? <span className="skel-line" style={{ width: 120, height: 34 }} /> : account ? (
+              <AccountMenu account={account} email={watch ? null : email} watch={watch} onLogout={logout} />
+            ) : (
+              <button className="btn btn-dark btn-sm" onClick={login}><EnvelopeSimple size={16} /> Sign in</button>
+            )}
+          </div>
         </div>
-      </aside>
+      </header>
       <main className="main" key={loc.pathname}><div className="fade-up page-narrow"><Outlet /></div></main>
       <nav className="bottom-nav">
         {NAV.filter((n) => n.label !== "Settings" && n.label !== "Proof").map(({ to, icon: I, label, end }) => (
@@ -69,6 +73,31 @@ export function NeedWallet({ what }: { what: string }) {
       <h3>Sign in with your email</h3>
       <p>{what} We send a one-time code. Your NEAR testnet account is created for you, no wallet or seed phrase.</p>
       <button className="btn btn-dark" onClick={login}>Sign in with email</button>
+    </div>
+  );
+}
+
+function AccountMenu(props: { account: string; email: string | null; watch: boolean; onLogout: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const loc = useLocation();
+  useEffect(() => { setOpen(false); }, [loc.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const down = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", down); document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("mousedown", down); document.removeEventListener("keydown", key); };
+  }, [open]);
+  const { account, email } = props;
+  return (
+    <div className="acct-menu" ref={ref}>
+      <button className="acct-pill" onClick={() => setOpen((o) => !o)} aria-haspopup="true" aria-expanded={open} title={email || account}>
+        <Persona email={email} name={account} size={26} />
+        <span className="who">{email || short(account, 8, 4)}</span>
+        <CaretDown size={14} />
+      </button>
+      {open && <div className="acct-pop"><AccountCard {...props} /></div>}
     </div>
   );
 }
