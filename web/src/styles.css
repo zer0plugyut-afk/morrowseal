@@ -133,6 +133,8 @@ p { margin: 0; }
 .topnav .logo { color: var(--text); flex: none; margin-right: 6px; }
 .topnav-links { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .topnav-links::-webkit-scrollbar { display: none; }
+.topnav-links > :first-child { margin-left: auto; }
+.topnav-links > :last-child { margin-right: auto; }
 .topnav-end { display: flex; align-items: center; gap: 8px; flex: none; }
 .acct-menu { position: relative; }
 .acct-pill { display: flex; align-items: center; gap: 8px; height: 44px; max-width: 220px; padding: 0 12px 0 6px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; }
