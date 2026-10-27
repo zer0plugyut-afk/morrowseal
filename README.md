@@ -2,7 +2,7 @@
 
 A private inheritance vault on NEAR testnet with a dead-man timer. Files are encrypted in the owner's browser; the key and the heir list are sealed to an OutLayer TEE enclave. If the owner stops checking in, the vault is released on chain and each named heir opens it by signing in with their email. NEAR only ever stores a commitment, an IPFS address of ciphertext, an heir count and timestamps.
 
-- **Try it:** the deployed app link is in the submission form (`<APP_URL>` below), or [run it locally](#run-locally) at `http://localhost:3000`.
+- **Try it:** [https://morrowseal-production.up.railway.app](https://morrowseal-production.up.railway.app) (testnet), or [run it locally](#run-locally) at `http://localhost:3000`.
 - **Network:** NEAR testnet only. Do not store real documents yet.
 - **Track:** `privacy` (TEE, confidential compute: plaintext and heir identities never on chain)
 - **For AI reviewers:** [AGENTS.md](AGENTS.md) (features, ids, claim-to-code map) and [llms.txt](llms.txt)
@@ -44,12 +44,12 @@ Self-custody has no recovery desk. When the only person who knows a seed phrase,
 
 ## Evaluate it in ten minutes (do X - see Y)
 
-All against `<APP_URL>` (the link in the submission form) or a local run at `http://localhost:3000`. Steps 1-4 need no sign-in.
+All against [https://morrowseal-production.up.railway.app](https://morrowseal-production.up.railway.app) or a local run at `http://localhost:3000`. Steps 1-4 need no sign-in.
 
 1. **Open `/`** - see the landing page ("Leave the keys. Keep the secret.").
 2. **Open `/app?watch=morrowseal-demo.testnet` and click a vault** - see a read-only workspace with released/opened demo vaults and the clicked vault's timeline (sealed -> released -> enclave sealed notices -> heirs emailed -> claimed) with NearBlocks links.
 3. **Open `/app/proof?watch=morrowseal-demo.testnet`** - see the raw `get_vault` JSON (hash, CID, counts, times only) next to the list of what only the enclave sees.
-4. **`curl <APP_URL>/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
+4. **`curl https://morrowseal-production.up.railway.app/api/vaults/1`** - see that the public record contains no names, emails, titles or contents.
 5. **Sign in (email code or Google)** - see a NEAR testnet account created and funded in the sidebar account card, with a DiceBear avatar.
 6. **Create -> pick "2 min (demo)" -> add yourself (another email you own) as heir -> seal** - see the vault on Vaults; the heir gets a "you've been named" email.
 7. **Sign in as the heir and open Shared with me** - see the vault as *Waiting*. Wait ~2 minutes without checking in - it becomes *Released* and the heir gets the claim email.
@@ -128,12 +128,12 @@ Built at NEAR HACKATHON 2026. Track:
 
 | Check | How | Code |
 | --- | --- | --- |
-| The public record has no names, emails or contents | `curl <APP_URL>/api/vaults/1` or view `get_vault` on [NearBlocks](https://testnet.nearblocks.io/address/morrowseal-vault.testnet) | `contracts/vault/src/lib.rs` `struct Vault` |
+| The public record has no names, emails or contents | `curl https://morrowseal-production.up.railway.app/api/vaults/1` or view `get_vault` on [NearBlocks](https://testnet.nearblocks.io/address/morrowseal-vault.testnet) | `contracts/vault/src/lib.rs` `struct Vault` |
 | Release and claims are real NEAR transactions that call OutLayer | Look up the hashes in `deployments/morrowseal.json` on NearBlocks; look for `request_execution` and the `on_claim` callback | `contracts/vault/src/lib.rs` `tee`, `on_claim` |
 | The enclave checks the heir's email | Read the `claim` / `heir_open` branches | `enclave/src/main.rs`, `enclave/src/jwt.rs` `verified_email` |
 | Encryption happens in the browser | Read `buildVault` (AES-256-GCM files, ECIES-sealed manifest) | `shared/morrowseal.mjs` |
 | The running enclave is this code | Download the wasm from FastFS (URL in AGENTS.md), check its sha256 is `2eefb0e9…a71b`, and compare with the OutLayer project's active version; a local rebuild needs the same toolchain and `PRIVY_APP_ID` | `enclave/` |
-| Activity is per user | `curl .../api/activity` with no owner returns `[]` | `keeper/index.mjs` `/api/activity` |
+| Activity is per user | `curl https://morrowseal-production.up.railway.app/api/activity` with no owner returns `[]` | `keeper/index.mjs` `/api/activity` |
 
 ## Threat model (short)
 

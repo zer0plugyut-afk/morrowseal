@@ -1,0 +1,24 @@
+# Morrowseal
+
+> Private inheritance vault on NEAR testnet. Files are encrypted in the browser; the key and heir list are sealed to an OutLayer TEE enclave. If the owner stops checking in, the vault is released on chain and each heir opens it by signing in with their email. NEAR stores only a commitment, an IPFS CID, an heir count and times.
+
+Problem: crypto and private documents are lost for good when their only holder dies; existing workarounds expose the secret early or to a third party. Tracks: privacy (TEE), realworld (estate planning with email sign-in, no wallet).
+
+Key facts:
+- Contract: morrowseal-vault.testnet (https://testnet.nearblocks.io/address/morrowseal-vault.testnet)
+- Enclave: OutLayer project morrowseal-ops.testnet/morrowseal, wasm sha256 2eefb0e9302e312d8e56bd43663cd602f8b2daa82eb2cd82c193b4c006b1a71b
+- NEAR features: smart contract, OutLayer TEE via yield/resume (request_execution + callbacks), Privy-held NEAR implicit accounts
+- Features: Privy email/Google sign-in, 5-step sealing, heirs emailed at seal and on release, check-in dead-man timer, enclave verifies heir email, Shared with me, reopen on any device, keeper-paid gas for heirs, owner preview
+- App: https://morrowseal-production.up.railway.app or `http://localhost:3000` locally
+
+## Docs
+- [AGENTS.md](AGENTS.md): features, architecture, ids, claim-to-code map
+- [README.md](README.md): verify-it-yourself steps, judge walkthrough, threat model, limitations
+- [docs/threat-model.md](docs/threat-model.md)
+
+## Code
+- [contracts/vault/src/lib.rs](contracts/vault/src/lib.rs): NEAR contract
+- [enclave/src/main.rs](enclave/src/main.rs): TEE worker (notify, claim, heir_open, owner_open)
+- [shared/morrowseal.mjs](shared/morrowseal.mjs): browser crypto
+- [keeper/index.mjs](keeper/index.mjs): API, relay, mail
+- [web/src](web/src): React app
