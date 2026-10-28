@@ -2,7 +2,7 @@
 
 > Private inheritance vault on NEAR testnet. Files are encrypted in the browser; the key and heir list are sealed to an OutLayer TEE enclave. If the owner stops checking in, the vault is released on chain and each heir opens it by signing in with their email. NEAR stores only a commitment, an IPFS CID, an heir count and times.
 
-Problem: crypto and private documents are lost for good when their only holder dies; existing workarounds expose the secret early or to a third party. Tracks: privacy (TEE), realworld (estate planning with email sign-in, no wallet).
+Problem: crypto and private documents are lost for good when their only holder dies; existing workarounds expose the secret early or to a third party. Track: privacy (TEE, confidential compute over sensitive data; the keeper sees heir emails after release).
 
 Key facts:
 - Contract: morrowseal-vault.testnet (https://testnet.nearblocks.io/address/morrowseal-vault.testnet)

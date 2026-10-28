@@ -20,6 +20,9 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 - [Why it has to be NEAR](#why-it-has-to-be-near)
 - [NEAR-native components](#near-native-components)
 - [Hackathon track: privacy](#hackathon-track-privacy)
+- [Libraries and baseline](#libraries-and-baseline)
+- [Disclosure (Q-015)](#disclosure-q-015)
+- [Demo post](#demo-post)
 - [Verify it yourself](#verify-it-yourself)
 - [Threat model (short)](#threat-model-short)
 - [Trust model](#trust-model)
@@ -122,7 +125,35 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 
 Built at NEAR HACKATHON 2026. Track:
 
-- `privacy` - files are encrypted in the owner's browser (AES-256-GCM) and the file key and heir list are sealed to an OutLayer enclave in Intel TDX; `notify`, `claim`, `heir_open` and `owner_open` run it via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions, and it releases a key only to a sign-in whose Privy-verified email matches the sealed heir email; NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
+- `privacy` (Privacy & Private AI: "confidential computation ... AI that protects sensitive data", hint "TEE"): the sensitive data here is a person's files, letter and heir list. They are encrypted or sealed in the owner's browser, and the key and heir list can be opened only inside an OutLayer enclave (Intel TDX) that releases a key only for a Released vault and only to a sign-in whose Privy-verified email matches the sealed heir email. `notify`, `claim`, `heir_open` and `owner_open` run that enclave via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions. NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
+- Limits, so the claim is not read as more than it is: there is no AI in this app. The keeper sees heir emails after release (it sends the mail) and an HMAC of them at seal time. Privy holds users' NEAR keys and the enclave trusts Privy's verified-email answer. Everything is testnet-only with one enclave deployment. See [Threat model](#threat-model-short) and [Limitations](#limitations).
+
+## Libraries and baseline
+
+**Baseline.** There is no pre-hackathon baseline in this repository. All code was written from 2026-10-20 onward (first commit 2026-10-20 UTC), inside the window that began on 2026-10-19 (Q-001). AI coding tools were used to write and edit code and docs.
+
+**Dependencies** (from `package.json`, `web/package.json`, `contracts/vault/Cargo.toml` and `enclave/Cargo.toml`):
+
+- Keeper / shared (Node 20+): `eciesjs`, `jose`, `near-api-js` (v5).
+- Web app: `react`, `react-dom`, `react-router-dom`, `vite`, `@vitejs/plugin-react`, `typescript`, `near-api-js` (v7), `eciesjs`, `@privy-io/react-auth`, `@solana/kit`, `@solana-program/system`, `@solana-program/token`, `@phosphor-icons/react`, `@dicebear/core`, `@dicebear/collection`, `@unlocalhosted/metalui`, `buffer`. Fonts Geist and OpenRunde (SIL OFL, files in `web/public/fonts`).
+- NEAR contract (Rust): `near-sdk` 5.17, `serde_json`, `hex`.
+- Enclave (Rust, `wasm32-wasip2`): `serde`, `serde_json`, `sha2`, `hmac`, `hkdf`, `hex`, `base64`, `p256`, `ecies`, `libsecp256k1`, `wasi-http-client`.
+
+**External pieces:**
+
+- OutLayer (`outlayer.testnet`, TEE on Intel TDX): runs the enclave worker; the wasm is served from FastFS.
+- Privy: email-code and Google sign-in, and embedded NEAR implicit-account wallets.
+- IPFS pinning and gateways (Pinata, with public gateway fallbacks) for ciphertext.
+- Email delivery for heir notices: AgentMail, with Brevo as the fallback transport.
+- NEAR testnet RPC, NearBlocks (explorer links), Railway (hosting).
+
+## Disclosure (Q-015)
+
+The same builder is submitting two independent projects to NEAR HACKATHON: this one (Morrowseal, a private inheritance vault) and **NEAR Private OTC** (a private OTC deal board settled through NEAR Intents): https://near-private-otc-productio999n.up.railway.app. They are different products with different problems, users, contracts, enclaves and deployments. They were built with the same general stack (OutLayer, Privy sign-in, ECIES sealing), which is why some helper code looks alike. This is not the same project submitted twice.
+
+## Demo post
+
+Demo post on X: added on 2026-11-01
 
 ## Verify it yourself
 
@@ -204,3 +235,7 @@ Build and test the Rust parts:
 - The first claim of each share is recorded on chain once. After that the heir can reopen it any number of times, on any device, by signing in with the named email (`heir_open`: the enclave re-checks the email and re-seals the key to that browser). Each reopen is a relayed TEE call paid by the keeper.
 - Privy holds users' NEAR keys; the enclave trusts Privy's verified-email answer.
 - Vault titles and heir names (device notes) sync across the owner's devices as an AES-256-GCM blob the server cannot read: the key is HKDF of a deterministic ed25519 signature by the owner's own Privy-held NEAR key over a fixed domain-separated message. The keeper stores ciphertext on its volume, keyed by Privy user id. Anyone who controls the owner's Privy login can derive the key. Heir names and emails can be restored on any device with **Show heir details** (owner-verified enclave open, vaults #7+), and are then kept only in that device's storage.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

@@ -12,8 +12,7 @@ Morrowseal is an inheritance vault with a dead-man timer. The owner's browser en
 
 ## Hackathon tracks
 
-- `privacy` (Privacy & Private AI; hint "TEE"): plaintext and heir identities never touch the chain or the keeper's storage; release decisions run in a TEE.
-- `realworld` (Real-World Money; "something a normal company could use tomorrow"): estate planning for ordinary families; email or Google sign-in, no wallet, no seed phrase, no gas for heirs.
+- `privacy` (Privacy & Private AI; hint "TEE"): confidential compute over sensitive data. Files and heir identities never go on chain in plaintext, and release decisions run in an OutLayer TEE. Limits: the keeper sees heir emails after release (to send mail) and an HMAC of them at seal time; Privy holds users' NEAR keys; testnet only.
 
 ## Features (each is implemented; see the map below)
 
