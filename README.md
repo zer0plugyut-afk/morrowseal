@@ -13,6 +13,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 - [The stakes](#the-stakes)
 - [Why current options fail](#why-current-options-fail)
+- [Try it in 2 minutes (do X - see Y)](#try-it-in-2-minutes-do-x---see-y)
 - [Evaluate it in ten minutes (do X - see Y)](#evaluate-it-in-ten-minutes-do-x---see-y)
 - [Life of a vault](#life-of-a-vault)
 - [Architecture](#architecture)
@@ -44,6 +45,16 @@ Self-custody has no recovery desk. When the only person who knows a seed phrase,
 | Hosted dead-man's switch | The operator can read the secret and can shut down. |
 | Put it on a public chain | Everything on chain is readable forever. |
 | Multisig / social recovery | Needs heirs to run wallets and coordinate; reveals who the heirs are. |
+
+## Try it in 2 minutes (do X - see Y)
+
+No sign-in, no email needed.
+
+1. **Open [`/app?watch=morrowseal-demo.testnet`](https://morrowseal-production.up.railway.app/app?watch=morrowseal-demo.testnet) and click a vault** - see a demo vault's timeline (sealed -> released -> heirs emailed -> claimed) with NearBlocks links.
+2. **Open [`/app/proof?watch=morrowseal-demo.testnet`](https://morrowseal-production.up.railway.app/app/proof?watch=morrowseal-demo.testnet)** - see the raw on-chain record (hash, CID, counts, times only) next to what only the enclave sees.
+3. **Run `curl https://morrowseal-production.up.railway.app/api/vaults/1`** - see that the public record holds no names, emails, titles or contents.
+
+For the full flow (create, release, heir opens), use the ten-minute steps below.
 
 ## Evaluate it in ten minutes (do X - see Y)
 
