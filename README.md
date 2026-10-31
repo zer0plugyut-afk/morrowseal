@@ -22,7 +22,6 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 - [NEAR-native components](#near-native-components)
 - [Hackathon track: privacy](#hackathon-track-privacy)
 - [Libraries and baseline](#libraries-and-baseline)
-- [Disclosure (Q-015)](#disclosure-q-015)
 - [Demo post](#demo-post)
 - [Verify it yourself](#verify-it-yourself)
 - [Threat model (short)](#threat-model-short)
@@ -157,10 +156,6 @@ Built at NEAR HACKATHON 2026. Track:
 - IPFS pinning and gateways (Pinata, with public gateway fallbacks) for ciphertext.
 - Email delivery for heir notices: AgentMail, with Brevo as the fallback transport.
 - NEAR testnet RPC, NearBlocks (explorer links), Railway (hosting).
-
-## Disclosure (Q-015)
-
-The same builder is submitting two independent projects to NEAR HACKATHON: this one (Morrowseal, a private inheritance vault) and **NEAR Private OTC** (a private OTC deal board settled through NEAR Intents): https://near-private-otc-productio999n.up.railway.app. They are different products with different problems, users, contracts, enclaves and deployments. They were built with the same general stack (OutLayer, Privy sign-in, ECIES sealing), which is why some helper code looks alike. This is not the same project submitted twice.
 
 ## Demo post
 
