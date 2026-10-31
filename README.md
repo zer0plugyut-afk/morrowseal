@@ -135,7 +135,7 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 
 Built at NEAR HACKATHON 2026. Tracks:
 
-- `open` (Open Innovation, primary): the track's own example idea is an inheritance account, where an owner checks in on a schedule and, after missed check-ins and a waiting period the owner can cancel, assets go to named heirs. Morrowseal applies that idea to what people actually want to pass on (files, a letter, secrets) rather than funds held in a contract: the owner checks in, a missed deadline releases the vault, and only the named heirs can open it.
+- `open` (Open Innovation, primary)
 
 - `privacy` (Privacy & Private AI: "confidential computation ... AI that protects sensitive data", hint "TEE"): the sensitive data here is a person's files, letter and heir list. They are encrypted or sealed in the owner's browser, and the key and heir list can be opened only inside an OutLayer enclave (Intel TDX) that releases a key only for a Released vault and only to a sign-in whose Privy-verified email matches the sealed heir email. `notify`, `claim`, `heir_open` and `owner_open` run that enclave via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions. NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
 - Limits, so the claim is not read as more than it is: there is no AI in this app. The keeper sees heir emails after release (it sends the mail) and an HMAC of them at seal time. Privy holds users' NEAR keys and the enclave trusts Privy's verified-email answer. Everything is testnet-only with one enclave deployment. See [Threat model](#threat-model-short) and [Limitations](#limitations).
