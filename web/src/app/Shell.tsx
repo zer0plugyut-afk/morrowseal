@@ -30,21 +30,21 @@ export default function Shell() {
   return (
     <div className="min-h-dvh bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-3 sm:gap-4 px-4 sm:px-6">
           <Logo to="/" />
-          <nav className="ml-2 hidden min-w-0 flex-1 items-center gap-0.5 lg:flex" aria-label="App">
+          <nav className="ml-2 hidden min-w-0 flex-1 items-center gap-0.5 overflow-hidden lg:flex" aria-label="App">
             {NAV.map(({ to, icon: I, label, end }) => (
-              <NavLink key={to} to={to} end={end} title={label} className={({ isActive }) => cn("relative flex h-9 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors", isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              <NavLink key={to} to={to} end={end} title={label} className={({ isActive }) => cn("relative flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors", isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
                 {({ isActive }) => (<>
                   {isActive && <motion.span layoutId="topnav-pill" className="absolute inset-0 rounded-full bg-card ring-1 ring-border" transition={{ type: "spring", stiffness: 380, damping: 34 }} />}
                   <I size={17} weight={isActive ? "fill" : "regular"} className="relative" />
-                  <span className={cn("relative", !isActive && "hidden xl:inline")}>{label}</span>
+                  <span className={cn("relative whitespace-nowrap", !isActive && "hidden min-[1280px]:inline")}>{label}</span>
                   {label === "Check-ins" && overdue > 0 ? <span className="relative grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{overdue}</span> : null}
                 </>)}
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
             <ThemeToggle />
             {!ready ? <Skeleton className="h-9 w-32" /> : account ? (
               <AccountMenu account={account} email={watch ? null : email} watch={watch} onLogout={logout} />
@@ -96,9 +96,9 @@ function AccountMenu(props: { account: string; email: string | null; watch: bool
   return (
     <Popover open={open} onOpenChange={setOpen} side="bottom" align="end" sideOffset={10}>
       <PopoverTrigger>
-        <Button variant="secondary" size="sm" className="h-9 max-w-[11rem] pl-1.5 pr-3 sm:max-w-[14rem]" title={email || account} aria-haspopup="true">
+        <Button variant="secondary" size="sm" className="h-9 w-auto min-w-0 max-w-[8.5rem] shrink-0 overflow-hidden pl-1.5 pr-3 sm:max-w-[11rem]" title={email || account} aria-haspopup="true">
           <Persona email={email} name={account} size={24} />
-          <span className="truncate">{email || short(account, 8, 4)}</span>
+          <span className="min-w-0 flex-1 truncate whitespace-nowrap text-left">{email || short(account, 8, 4)}</span>
           <CaretDown size={13} className="shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
@@ -125,9 +125,9 @@ function AccountCard({ account, email, watch, onLogout }: { account: string; ema
     <div className="flex flex-col gap-3 p-4 text-sm">
       <div className="flex items-center gap-3">
         <Persona email={email} name={account} size={36} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <div className="text-xs text-muted-foreground">{watch ? "Viewing read-only" : "Signed in · testnet"}</div>
-          <div className="truncate font-medium" title={email || account}>{email || short(account, 10, 6)}</div>
+          <div className="truncate whitespace-nowrap font-medium" title={email || account}>{email || short(account, 10, 6)}</div>
         </div>
         {!watch && <button className={iconBtn} onClick={onLogout} aria-label="Sign out" title="Sign out"><SignOut size={16} /></button>}
       </div>
