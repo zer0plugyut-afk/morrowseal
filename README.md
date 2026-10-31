@@ -4,7 +4,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 
 - **Try it:** [https://morrowseal-production.up.railway.app](https://morrowseal-production.up.railway.app) (testnet), or [run it locally](#run-locally) at `http://localhost:3000`.
 - **Network:** NEAR testnet only. Do not store real documents yet.
-- **Track:** `privacy` (TEE, confidential compute: plaintext and heir identities never on chain)
+- **Tracks:** `open` (Open Innovation, primary) and `privacy` (TEE, confidential compute: plaintext and heir identities never on chain)
 - **For AI reviewers:** [AGENTS.md](AGENTS.md) (features, ids, claim-to-code map) and [llms.txt](llms.txt)
 
 ![Landing](docs/screens/landing.png)
@@ -20,7 +20,7 @@ A private inheritance vault on NEAR testnet with a dead-man timer. Files are enc
 - [What is private vs public](#what-is-private-vs-public)
 - [Why it has to be NEAR](#why-it-has-to-be-near)
 - [NEAR-native components](#near-native-components)
-- [Hackathon track: privacy](#hackathon-track-privacy)
+- [Hackathon tracks: open + privacy](#hackathon-tracks-open--privacy)
 - [Libraries and baseline](#libraries-and-baseline)
 - [Demo post](#demo-post)
 - [Verify it yourself](#verify-it-yourself)
@@ -131,9 +131,11 @@ The web app never reads the chain directly: the keeper serves a read model (`/ap
 - **Yield/resume:** the contract calls `outlayer.testnet.request_execution` and resumes in `on_notify` / `on_claim` / `on_heir_open` / `on_owner_open` callbacks with the enclave's answer.
 - **Privy NEAR accounts:** every owner and heir gets a NEAR testnet implicit account (Privy extended-chain wallet, `chainType: near`, signed with raw-hash signing), topped up once by the keeper. No wallet extension, no seed phrase.
 
-## Hackathon track: privacy
+## Hackathon tracks: open + privacy
 
-Built at NEAR HACKATHON 2026. Track:
+Built at NEAR HACKATHON 2026. Tracks:
+
+- `open` (Open Innovation, primary): the track's own example idea is an inheritance account, where an owner checks in on a schedule and, after missed check-ins and a waiting period the owner can cancel, assets go to named heirs. Morrowseal applies that idea to what people actually want to pass on (files, a letter, secrets) rather than funds held in a contract: the owner checks in, a missed deadline releases the vault, and only the named heirs can open it.
 
 - `privacy` (Privacy & Private AI: "confidential computation ... AI that protects sensitive data", hint "TEE"): the sensitive data here is a person's files, letter and heir list. They are encrypted or sealed in the owner's browser, and the key and heir list can be opened only inside an OutLayer enclave (Intel TDX) that releases a key only for a Released vault and only to a sign-in whose Privy-verified email matches the sealed heir email. `notify`, `claim`, `heir_open` and `owner_open` run that enclave via `outlayer.testnet.request_execution` (yield/resume) inside NEAR transactions. NEAR stores only a commitment, an IPFS CID of ciphertext, an heir count and timestamps.
 - Limits, so the claim is not read as more than it is: there is no AI in this app. The keeper sees heir emails after release (it sends the mail) and an HMAC of them at seal time. Privy holds users' NEAR keys and the enclave trusts Privy's verified-email answer. Everything is testnet-only with one enclave deployment. See [Threat model](#threat-model-short) and [Limitations](#limitations).
