@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Morrowseal: private inheritance vault on NEAR with a TEE dead-man switch</title>
     <meta name="description" content="Private inheritance vault on NEAR. Files are encrypted in your browser and the key is sealed to an OutLayer TEE enclave. If you stop checking in, your heirs open it by signing in with their email. Only a hash goes on chain." />
     <meta name="keywords" content="NEAR, inheritance, dead man's switch, crypto inheritance, digital estate, TEE, OutLayer, confidential compute, yield resume, Privy, privacy, encrypted vault, heirs" />
-    <meta name="theme-color" content="#0953ff" />
+    <meta name="theme-color" content="#0285f7" />
     <link rel="canonical" href="https://morrowseal-production.up.railway.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Morrowseal" />
@@ -23,9 +23,8 @@
     </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/OpenRunde-Regular.woff2" as="font" type="font/woff2" crossorigin />
     <script>
-      document.documentElement.dataset.theme = "light"; try { if (localStorage.getItem("ms-theme-choice") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}
+      try { if (localStorage.getItem("ms-theme-choice") === "dark") document.documentElement.classList.add("dark"); } catch (e) {}
     </script>
   </head>
   <body>

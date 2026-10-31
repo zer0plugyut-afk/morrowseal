@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EnvelopeSimple, LockKeyOpen, DownloadSimple, FileText, CheckCircle, CircleNotch, ArrowSquareOut, Info } from "@phosphor-icons/react";
-import { Folder, useToast } from "@unlocalhosted/metalui";
-import { Logo, ThemeToggle, Reveal } from "../components/ui";
+import { EnvelopeSimple, LockKeyOpen, DownloadSimple, FileText, ArrowSquareOut, LockKey } from "@phosphor-icons/react";
+import { useToast } from "../components/toast";
+import { Banner, CenterPage, Hero, Spinner } from "../components/ui";
+import { Button } from "@/components/motion/button/base";
+import { TextReveal } from "@/components/motion/text-reveal";
 import { buildClaim, buildOwnerOpen, openGift } from "@shared/morrowseal.mjs";
 import { fetchCid, relayClaim } from "../lib/api";
 import { EXPLORER, view, type Vault } from "../lib/near";
@@ -111,57 +113,58 @@ export default function Claim() {
   const claimed = vault?.claims[hi];
   const busy = phase === "auth" || phase === "claim" || phase === "open";
 
+  const lnk = "text-primary underline-offset-4 hover:underline";
+  const note = (t: React.ReactNode) => <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">{t}</p>;
+  const h1 = "text-balance text-3xl font-semibold tracking-tight sm:text-4xl";
+  const sub = "max-w-md text-pretty text-muted-foreground";
   return (
-    <div className="claim-page">
-      <div style={{ position: "fixed", top: 18, left: 22, right: 22, display: "flex", justifyContent: "space-between" }}><Logo /><ThemeToggle /></div>
-      <div className={`card claim-card fade-up ${phase === "done" && gift ? "claim-wide" : ""}`}>
-        {phase === "done" && gift ? (<>
-          <div style={{ display: "grid", placeItems: "center" }}><Folder name={gift.owner_name ? `From ${gift.owner_name}` : "For you"} count={gift.files.length + 1} hue="green" open peeks={[{ thumb: "linear-gradient(135deg,#d6f5e4,#0ea158)" }, { thumb: "#e2ecf5" }, { thumb: "#fff" }]} /></div>
-          <h1><Reveal text={`${gift.heir_name ? gift.heir_name + ", this" : "This"} is what ${gift.owner_name || "they"} left you`} step={50} /></h1>
-          {gift.message && <div className="letter">{gift.message}</div>}
-          <div className="gift-files">{gift.files.map((f, k) => (
-            <div key={k} className="file-row"><FileText size={20} /><div style={{ flex: 1, minWidth: 0 }}><div className="fname" style={{ fontWeight: 600 }} title={f.name}>{f.name}</div><div className="muted" style={{ fontSize: 13 }}>{(f.size / 1024).toFixed(1)} KB · decrypted here</div></div><button className="btn btn-dark btn-sm" onClick={() => download(f)}><DownloadSimple size={16} /> Save</button></div>))}</div>
-          {gift.files.some((f) => f.type.startsWith("text/")) && <div className="letter mono text-preview" style={{ fontSize: 13 }}>{new TextDecoder().decode(gift.files.find((f) => f.type.startsWith("text/"))!.bytes).slice(0, 20000)}</div>}
-          <p style={{ fontSize: 13, marginTop: 18 }}>Nothing was decrypted on a server. {tx && <a className="link" href={`${EXPLORER}/txns/${tx}`} target="_blank" rel="noreferrer">Claim transaction <ArrowSquareOut size={12} /></a>}</p>
-        </>) : (<>
-          <div style={{ display: "grid", placeItems: "center" }}><Folder name="For you" count={3} hue="blue" open={busy} peeks={[{ thumb: "linear-gradient(135deg,#cfe8ff,#0953ff)" }, { thumb: "#e2ecf5" }, { thumb: "linear-gradient(160deg,#1a1615,#453f3d)" }]} /></div>
-          <h1><Reveal text="Something was left for you" step={60} /></h1>
-          <p>Someone close to you set up a private vault and named you. Sign in with the email this link was sent to, and it opens right here in your browser.</p>
-          {!heirEmail ? (
-            <div className="claim-actions">
-              {!checked ? <CircleNotch size={22} className="spin" /> : authConfigured() ? <button className="btn btn-dark btn-lg" disabled={busy} onClick={signInOnly}>{phase === "auth" ? <CircleNotch size={18} className="spin" /> : <EnvelopeSimple size={18} weight="bold" />} Sign in to open</button> : <p>Sign-in is being set up. Try again shortly.</p>}
-              <p style={{ fontSize: 13.5 }}>Use the email this link was sent to. Email code or Google both work.</p>
-            </div>
-          ) : missing ? (
-            <div className="banner warn" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> We couldn't find this vault. Check that you opened the full link from your email.</div>
-          ) : !vault ? (
-            <p style={{ marginTop: 18 }}><CircleNotch size={14} className="spin" /> Looking up the vault on NEAR…</p>
-          ) : vault.status === "Active" ? (
-            <div className="banner" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> Not released yet. It's still sealed while its owner keeps checking in. You'll get an email if that changes.</div>
-          ) : vault.status === "Cancelled" ? (
-            <div className="banner" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> This vault was closed by its owner.</div>
-          ) : claimed && !localStorage.getItem(slot) ? (
-            <div className="claim-actions">
-              <div className="banner" style={{ textAlign: "left" }}><CheckCircle size={20} /> <div>Already opened{claimed.verified_email ? " by a verified email sign-in" : ""}. Signed in as <b title={heirEmail}>{heirEmail}</b>, you can open it again here.</div></div>
-              <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => reopen()}>{busy ? <CircleNotch size={18} className="spin" /> : <LockKeyOpen size={18} weight="bold" />} Open it again</button>
-              {phase === "claim" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> The enclave is checking your email…</p>}
-              {phase === "open" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> Decrypting in your browser…</p>}
-            </div>
-          ) : !token ? (
-            <div className="banner warn" style={{ marginTop: 22, textAlign: "left" }}><Info size={20} /> This link is missing its private part. Open the button in your email again.</div>
-          ) : (
-            <div className="claim-actions">
-              <div className="banner" style={{ textAlign: "left" }}><CheckCircle size={20} weight="fill" color="#0ea158" /> <div>Ready to open. Signed in as <b title={heirEmail}>{heirEmail}</b>.</div></div>
-              <button className="btn btn-dark btn-lg" disabled={busy} onClick={() => claim()}>{busy ? <CircleNotch size={18} className="spin" /> : <LockKeyOpen size={18} weight="bold" />} Open what was left</button>
-              {phase === "claim" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> The enclave is checking your link and email…</p>}
-              {phase === "open" && <p style={{ fontSize: 14 }}><CircleNotch size={14} className="spin" /> Decrypting in your browser…</p>}
-            </div>
-          )}
-          {err === "WRONG_EMAIL" ? <div className="banner warn" style={{ marginTop: 16, textAlign: "left" }}><Info size={20} /> <div>You're signed in as <b>{heirEmail}</b>, but this was left for a different email. <button className="link" style={{ background: "none", border: 0, padding: 0, cursor: "pointer" }} onClick={switchAccount}>Sign in with another account</button></div></div> :
-          err && <div className="banner warn" style={{ marginTop: 16, textAlign: "left" }}><Info size={20} /> <div>{err}{tx && <> · <a className="link" href={`${EXPLORER}/txns/${tx}`} target="_blank" rel="noreferrer">transaction</a></>}</div></div>}
-          <p style={{ fontSize: 12.5, marginTop: 24 }}>No wallet or crypto needed. Your sign-in proves the email; the secure enclave checks it before releasing anything.</p>
-        </>)}
-      </div>
-    </div>
+    <CenterPage wide={phase === "done" && !!gift}>
+      {phase === "done" && gift ? (<>
+        <Hero tone="success" icon={<LockKeyOpen size={30} weight="duotone" />} />
+        <h1 className={h1}><TextReveal text={`${gift.heir_name ? gift.heir_name + ", this" : "This"} is what ${gift.owner_name || "they"} left you`} /></h1>
+        {gift.message && <div className="w-full whitespace-pre-wrap rounded-2xl bg-muted/60 p-5 text-left text-sm leading-relaxed">{gift.message}</div>}
+        <div className="grid w-full gap-2">{gift.files.map((f, k) => (
+          <div key={k} className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-left"><FileText size={20} className="shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><div className="truncate text-sm font-medium" title={f.name}>{f.name}</div><div className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB · decrypted here</div></div><Button size="sm" onClick={() => download(f)}><DownloadSimple size={16} /> Save</Button></div>))}</div>
+        {gift.files.some((f) => f.type.startsWith("text/")) && <pre className="w-full overflow-auto whitespace-pre-wrap rounded-2xl bg-muted/60 p-5 text-left font-mono text-xs">{new TextDecoder().decode(gift.files.find((f) => f.type.startsWith("text/"))!.bytes).slice(0, 20000)}</pre>}
+        <p className="text-xs text-muted-foreground">Nothing was decrypted on a server. {tx && <a className={lnk} href={`${EXPLORER}/txns/${tx}`} target="_blank" rel="noreferrer">Claim transaction <ArrowSquareOut size={12} className="inline" /></a>}</p>
+      </>) : (<>
+        <Hero icon={busy ? <LockKeyOpen size={30} weight="duotone" /> : <LockKey size={30} weight="duotone" />} />
+        <h1 className={h1}><TextReveal text="Something was left for you" /></h1>
+        <p className={sub}>Someone close to you set up a private vault and named you. Sign in with the email this link was sent to, and it opens right here in your browser.</p>
+        {!heirEmail ? (
+          <div className="grid w-full justify-items-center gap-3">
+            {!checked ? <Spinner size={22} /> : authConfigured() ? <Button size="lg" disabled={busy} onClick={signInOnly}>{phase === "auth" ? <Spinner size={18} /> : <EnvelopeSimple size={18} weight="bold" />} Sign in to open</Button> : <p className="text-sm text-muted-foreground">Sign-in is being set up. Try again shortly.</p>}
+            <p className="text-sm text-muted-foreground">Use the email this link was sent to. Email code or Google both work.</p>
+          </div>
+        ) : missing ? (
+          <Banner tone="warn" className="w-full text-left">We couldn't find this vault. Check that you opened the full link from your email.</Banner>
+        ) : !vault ? (
+          note(<><Spinner /> Looking up the vault on NEAR…</>)
+        ) : vault.status === "Active" ? (
+          <Banner className="w-full text-left">Not released yet. It's still sealed while its owner keeps checking in. You'll get an email if that changes.</Banner>
+        ) : vault.status === "Cancelled" ? (
+          <Banner className="w-full text-left">This vault was closed by its owner.</Banner>
+        ) : claimed && !localStorage.getItem(slot) ? (
+          <div className="grid w-full justify-items-center gap-3">
+            <Banner tone="ok" className="w-full text-left">Already opened{claimed.verified_email ? " by a verified email sign-in" : ""}. Signed in as <b className="break-all" title={heirEmail}>{heirEmail}</b>, you can open it again here.</Banner>
+            <Button size="lg" disabled={busy} onClick={() => reopen()}>{busy ? <Spinner size={18} /> : <LockKeyOpen size={18} weight="bold" />} Open it again</Button>
+            {phase === "claim" && note(<><Spinner /> The enclave is checking your email…</>)}
+            {phase === "open" && note(<><Spinner /> Decrypting in your browser…</>)}
+          </div>
+        ) : !token ? (
+          <Banner tone="warn" className="w-full text-left">This link is missing its private part. Open the button in your email again.</Banner>
+        ) : (
+          <div className="grid w-full justify-items-center gap-3">
+            <Banner tone="ok" className="w-full text-left">Ready to open. Signed in as <b className="break-all" title={heirEmail}>{heirEmail}</b>.</Banner>
+            <Button size="lg" disabled={busy} onClick={() => claim()}>{busy ? <Spinner size={18} /> : <LockKeyOpen size={18} weight="bold" />} Open what was left</Button>
+            {phase === "claim" && note(<><Spinner /> The enclave is checking your link and email…</>)}
+            {phase === "open" && note(<><Spinner /> Decrypting in your browser…</>)}
+          </div>
+        )}
+        {err === "WRONG_EMAIL" ? <Banner tone="warn" className="w-full text-left">You're signed in as <b className="break-all">{heirEmail}</b>, but this was left for a different email. <button className={lnk} onClick={switchAccount}>Sign in with another account</button></Banner> :
+        err && <Banner tone="warn" className="w-full text-left">{err}{tx && <> · <a className={lnk} href={`${EXPLORER}/txns/${tx}`} target="_blank" rel="noreferrer">transaction</a></>}</Banner>}
+        <p className="mt-2 max-w-sm text-xs text-muted-foreground">No wallet or crypto needed. Your sign-in proves the email; the secure enclave checks it before releasing anything.</p>
+      </>)}
+    </CenterPage>
   );
 }

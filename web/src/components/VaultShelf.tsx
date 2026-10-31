@@ -1,41 +1,69 @@
-// Metal UI Folder shelf, reused from the earlier vault project and adapted to Morrowseal vaults.
-import { Folder, StatusBadge, type FolderHue, type FolderPeek, type LedKind } from "@unlocalhosted/metalui";
+// Vault shelf: beUI-styled folder cards with an Animated Badge for status.
+import { motion } from "motion/react";
+import { FileText, LockKey, Envelope } from "@phosphor-icons/react";
+import { AnimatedBadge, type AnimatedBadgeStatus } from "@/components/motion/animated-badge";
+import { Card } from "@/components/motion/card";
+import { cn } from "@/lib/utils";
 import { deadline, type Vault } from "../lib/near";
 import { countdown } from "../lib/format";
 import { useNow } from "./ui";
 
 export type ShelfVault = Vault & { title: string; files?: number };
+type Tone = "blue" | "green" | "amber" | "red";
 
-function flapName(title: string) { const t = title.trim() || "Untitled vault"; return t.length > 22 ? `${t.slice(0, 21)}…` : t; }
-function hue(v: ShelfVault, left: number): FolderHue { if (v.status === "Cancelled") return "red"; if (v.status === "Released") return "green"; return left < v.interval_s * 250 ? "amber" : "blue"; }
-function led(v: ShelfVault): LedKind { if (v.status === "Cancelled") return "off"; if (v.status === "Released") return "live"; return "waiting"; }
-function words(v: ShelfVault, left: number) { if (v.status === "Cancelled") return "CANCELLED"; if (v.status === "Released") return v.claims.every(Boolean) ? "OPENED" : "RELEASED"; return left <= 0 ? "OVERDUE" : "SEALED"; }
-function peeks(v: ShelfVault): FolderPeek[] {
-  return [
-    { id: `${v.id}-letter`, thumb: "linear-gradient(135deg,#cfe8ff,#84b9ef 60%,#0953ff)" },
-    { id: `${v.id}-files`, thumb: "radial-gradient(60% 60% at 30% 30%,#e2ecf5,#9cc1e7)" },
-    { id: `${v.id}-seal`, thumb: "linear-gradient(160deg,#1a1615,#453f3d),radial-gradient(40% 40% at 70% 30%,#84b9ef,transparent)" },
-  ];
+const TONE: Record<Tone, { back: string; front: string; bar: string }> = {
+  blue: { back: "bg-primary/25", front: "bg-primary/15", bar: "bg-primary" },
+  green: { back: "bg-emerald-500/25", front: "bg-emerald-500/15", bar: "bg-emerald-500" },
+  amber: { back: "bg-amber-500/30", front: "bg-amber-500/15", bar: "bg-amber-500" },
+  red: { back: "bg-destructive/25", front: "bg-destructive/12", bar: "bg-destructive" },
+};
+
+function tone(v: ShelfVault, left: number): Tone { if (v.status === "Cancelled") return "red"; if (v.status === "Released") return "green"; return left < v.interval_s * 250 ? "amber" : "blue"; }
+function badge(v: ShelfVault, left: number): [AnimatedBadgeStatus, string] {
+  if (v.status === "Cancelled") return ["neutral", "Cancelled"];
+  if (v.status === "Released") return v.claims.every(Boolean) ? ["success", "Opened"] : ["info", "Released"];
+  return left <= 0 ? ["danger", "Overdue"] : left < v.interval_s * 250 ? ["warning", "Sealed"] : ["success", "Sealed"];
+}
+
+function FolderArt({ t }: { t: Tone }) {
+  const c = TONE[t];
+  return (
+    <div className="relative mx-auto h-28 w-full max-w-[13rem] [perspective:600px]" aria-hidden>
+      <div className={cn("absolute bottom-0 left-0 h-24 w-full rounded-2xl", c.back)} />
+      <div className={cn("absolute bottom-[5.9rem] left-0 h-4 w-20 rounded-t-xl", c.back)} />
+      {[{ r: -7, x: -34, i: Envelope }, { r: 0, x: 0, i: FileText }, { r: 7, x: 34, i: LockKey }].map(({ r, x, i: I }, k) => (
+        <motion.div key={k} className="absolute bottom-6 left-1/2 grid h-[4.5rem] w-14 -translate-x-1/2 place-items-center rounded-lg border border-border bg-background text-muted-foreground shadow-sm"
+          style={{ rotate: r, x }} variants={{ rest: { y: 0 }, hover: { y: -12 - (k === 1 ? 4 : 0), rotate: r * 1.5 } }} transition={{ type: "spring", stiffness: 340, damping: 22 }}>
+          <I size={18} weight="duotone" />
+        </motion.div>
+      ))}
+      <div className={cn("absolute bottom-0 left-0 h-[4.6rem] w-full rounded-2xl border border-white/20 backdrop-blur-[2px]", c.front)} />
+    </div>
+  );
 }
 
 export function VaultShelf({ vaults, onOpen }: { vaults: ShelfVault[]; onOpen: (id: number) => void }) {
   const now = useNow();
   return (
-    <div className="vault-shelf">
-      {vaults.map((v) => {
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {vaults.map((v, idx) => {
         const left = deadline(v) - now;
         const total = (v.interval_s + v.grace_s) * 1000;
         const p = v.status === "Active" ? Math.min(1, Math.max(0, left / total)) : 1;
+        const t = tone(v, left);
+        const [st, word] = badge(v, left);
         return (
-          <div key={v.id} className="card shelf-item fade-up" onClick={() => onOpen(v.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && onOpen(v.id)}>
-            <Folder name={flapName(v.title)} count={3} hue={hue(v, left)} peeks={peeks(v)} onUnfold={() => onOpen(v.id)} />
-            <div className="shelf-meta">
-              <StatusBadge led={led(v)}>{words(v, left)}</StatusBadge>
-              <div className="t">{v.title}</div>
-              <div className="s">{v.status === "Active" ? (left > 0 ? `Releases in ${countdown(left)} without a check-in` : "Releasing to heirs now") : v.status === "Released" ? `${v.claims.filter(Boolean).length} of ${v.heirs} heirs opened it` : "Cancelled by you"}</div>
-              <div className={`ring ${v.status === "Released" ? "done" : p < 0.25 ? "warn" : ""}`} style={{ ["--p" as any]: p }}><i /></div>
-            </div>
-          </div>
+          <motion.div key={v.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx, 8) * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }} whileHover="hover">
+            <Card interactive size="compact" className="h-full gap-4 px-4 pt-5" onClick={() => onOpen(v.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && onOpen(v.id)}>
+              <FolderArt t={t} />
+              <div className="flex min-w-0 flex-col gap-2">
+                <AnimatedBadge status={st} size="sm" className="self-start">{word}</AnimatedBadge>
+                <div className="truncate text-base font-semibold tracking-tight" title={v.title}>{v.title || "Untitled vault"}</div>
+                <div className="text-pretty text-sm text-muted-foreground">{v.status === "Active" ? (left > 0 ? `Releases in ${countdown(left)} without a check-in` : "Releasing to heirs now") : v.status === "Released" ? `${v.claims.filter(Boolean).length} of ${v.heirs} heirs opened it` : "Cancelled by you"}</div>
+              </div>
+              <div className="mt-auto h-1 overflow-hidden rounded-full bg-foreground/10"><div className={cn("h-full rounded-full transition-[width] duration-700", TONE[t].bar)} style={{ width: `${Math.round(p * 100)}%` }} /></div>
+            </Card>
+          </motion.div>
         );
       })}
     </div>

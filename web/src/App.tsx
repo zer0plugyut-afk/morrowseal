@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { ToastProvider } from "@unlocalhosted/metalui";
+import { ToastProvider } from "./components/toast";
+import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
 import Shell from "./app/Shell";
 import { AppState } from "./app/state";
@@ -28,7 +29,7 @@ export default function App() {
             <Route path="proof" element={<Proof />} />
             <Route path="settings" element={<Settings />} />
           </Route>
-          <Route path="*" element={<Landing />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </ToastProvider>

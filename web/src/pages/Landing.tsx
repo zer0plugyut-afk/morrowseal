@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ShieldCheck, Hash, EyeSlash, Heartbeat, EnvelopeSimple, Cpu, CheckCircle, Plus, LockKey, Fingerprint, FolderLock } from "@phosphor-icons/react";
-import { Folder } from "@unlocalhosted/metalui";
-import { Logo, Reveal, Rise, ThemeToggle } from "../components/ui";
+import { motion } from "motion/react";
+import { ArrowRight, ShieldCheck, Hash, EyeSlash, Heartbeat, EnvelopeSimple, Cpu, CheckCircle, LockKey, Fingerprint, FolderLock, FileText, Image as ImageIcon, Key } from "@phosphor-icons/react";
+import { Logo, Rise, ThemeToggle, Card, btn } from "../components/ui";
 import { AppPreview } from "../components/AppPreview";
+import { Persona } from "../components/Persona";
+import { AnimatedBadge } from "@/components/motion/animated-badge";
+import { TextReveal } from "@/components/motion/text-reveal";
+import { NumberTicker } from "@/components/motion/number-ticker";
+import { BouncyAccordion } from "@/components/motion/bouncy-accordion";
+import { ProjectFolder } from "@/components/motion/project-folder";
 import { VAULT_CONTRACT, OUTLAYER_PROJECT } from "@shared/morrowseal.mjs";
 import { EXPLORER } from "../lib/near";
 
@@ -16,73 +21,98 @@ const FAQ = [
   ["Is this live on mainnet?", "Not yet. Morrowseal runs on NEAR testnet today, so use it to try the flow, not for real documents."],
 ];
 
+const wrap = "mx-auto w-full max-w-6xl px-4 sm:px-6";
+const eyebrow = "mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary";
+const h2 = "text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl";
+
+function Pv({ icon: I, label }: { icon: any; label: string }) {
+  return <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground"><I size={26} weight="duotone" /><span className="text-xs">{label}</span></div>;
+}
+const previews = [
+  { id: "letter", content: <Pv icon={EnvelopeSimple} label="Letter" /> },
+  { id: "doc", content: <Pv icon={FileText} label="Documents" /> },
+  { id: "photo", content: <Pv icon={ImageIcon} label="Photos" /> },
+  { id: "key", content: <Pv icon={Key} label="Passwords" /> },
+];
+
 export default function Landing() {
-  const [flat, setFlat] = useState(false);
-  useEffect(() => { const f = () => setFlat(window.scrollY > 60); f(); addEventListener("scroll", f, { passive: true }); return () => removeEventListener("scroll", f); }, []);
   return (
-    <div className="landing">
-      <header className="nav">
-        <div className="wrap nav-in">
+    <div className="min-h-dvh overflow-x-clip bg-background">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/70 backdrop-blur-xl">
+        <div className={`${wrap} flex h-16 items-center gap-6`}>
           <Logo />
-          <nav className="nav-links"><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#heirs">For heirs</a><a href="#faq">FAQ</a></nav>
-          <div className="nav-cta">
-            <ThemeToggle className="icon-btn" />
-            <Link to="/app" className="nav-signin">Sign in</Link>
-            <Link to="/app/create" className="btn btn-dark btn-sm" style={{ background: "#1a1615", color: "#fff" }}>Create a vault</Link>
+          <nav className="hidden items-center gap-1 text-sm text-muted-foreground md:flex">
+            {[["#how", "How it works"], ["#privacy", "Privacy"], ["#heirs", "For heirs"], ["#faq", "FAQ"]].map(([h, l]) => <a key={h} href={h} className="rounded-full px-3 py-1.5 transition-colors hover:bg-muted hover:text-foreground">{l}</a>)}
+          </nav>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/app" className={btn("ghost", "sm", "hidden sm:inline-flex")}>Sign in</Link>
+            <Link to="/app/create" className={btn("primary", "sm")}>Create a vault</Link>
           </div>
         </div>
       </header>
 
-      <section className="hero">
-        <div className="wrap hero-copy">
-          <div className="chip fade-up" style={{ background: "rgba(255,255,255,.14)", color: "#fff", boxShadow: "inset 0 0 0 1px rgba(255,255,255,.25)" }}><Cpu size={14} /> Sealed in a secure enclave on NEAR</div>
-          <h1 style={{ marginTop: 22 }}><Reveal text="Leave the keys." delay={80} /><br /><Reveal text="Keep the secret." delay={360} /></h1>
-          <p className="hero-sub fade-up" style={{ animationDelay: "600ms" }}>A private vault for the people you love. Your files are sealed in a secure enclave and released only if you stop checking in. No lawyers, no seed phrases.</p>
-          <div className="hero-ctas fade-up" style={{ animationDelay: "760ms" }}>
-            <Link to="/app/create" className="btn btn-white btn-lg">Create a vault <ArrowRight size={18} weight="bold" /></Link>
-            <a href="#heirs" className="btn btn-glass btn-lg">See how heirs claim</a>
-          </div>
-          <div className="hero-trust fade-up" style={{ animationDelay: "900ms" }}>
-            <span><EyeSlash size={16} /> Encrypted in your browser</span><span><Hash size={16} /> Only hashes on chain</span><span><EnvelopeSimple size={16} /> Heirs sign in with email</span>
-          </div>
+      <section className="relative">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(60%_60%_at_50%_0%,color-mix(in_oklab,var(--primary)_16%,transparent),transparent)]" aria-hidden />
+        <div className={`${wrap} relative flex flex-col items-center pb-10 pt-16 text-center sm:pt-24`}>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <AnimatedBadge status="info" size="md" icon={<Cpu size={14} />}>Sealed in a secure enclave on NEAR</AnimatedBadge>
+          </motion.div>
+          <h1 className="mt-6 text-balance text-5xl font-semibold leading-[1.02] tracking-tight sm:text-7xl lg:text-8xl" aria-label="Leave the keys. Keep the secret.">
+            <TextReveal as="span" className="block" text="Leave the keys." delay={0.1} />
+            <TextReveal as="span" className="block text-primary" text="Keep the secret." delay={0.45} />
+          </h1>
+          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.6 }} className="mt-6 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
+            A private vault for the people you love. Your files are sealed in a secure enclave and released only if you stop checking in. No lawyers, no seed phrases.
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.95, duration: 0.6 }} className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link to="/app/create" className={btn("primary", "lg")}>Create a vault <ArrowRight size={18} weight="bold" /></Link>
+            <a href="#heirs" className={btn("secondary", "lg")}>See how heirs claim</a>
+          </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1, duration: 0.6 }} className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><EyeSlash size={16} /> Encrypted in your browser</span><span className="inline-flex items-center gap-1.5"><Hash size={16} /> Only hashes on chain</span><span className="inline-flex items-center gap-1.5"><EnvelopeSimple size={16} /> Heirs sign in with email</span>
+          </motion.div>
         </div>
-        <div className="hero-shot fade-up" style={{ animationDelay: "1000ms" }}>
-          <div className={`hero-shot-in ${flat ? "flat" : ""}`}><AppPreview /></div>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0, duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className={`${wrap} relative max-w-4xl pb-6`}>
+          <div className="glass rounded-[2rem] p-2 sm:p-3"><AppPreview /></div>
+        </motion.div>
       </section>
 
-      <section className="section" id="how">
-        <div className="wrap">
-          <div className="stats">
-            <Rise><div className="stat"><b>0</b><span>names, emails or files stored on chain</span></div></Rise>
-            <Rise delay={80}><div className="stat"><b>1 tap</b><span>to tell your vault you're still here</span></div></Rise>
-            <Rise delay={160}><div className="stat"><b>5 steps</b><span>from empty to sealed, in about two minutes</span></div></Rise>
+      <section className="py-20 sm:py-28" id="how">
+        <div className={wrap}>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[[0, "", "", "names, emails or files stored on chain"], [1, "", "\u00a0tap", "to tell your vault you're still here"], [5, "", "\u00a0steps", "from empty to sealed, in about two minutes"]].map(([n, , suf, d]: any, i) => (
+              <Rise key={d} delay={i * 80}><Card size="compact" className="h-full gap-2 px-6"><div className="text-5xl font-semibold tracking-tight text-primary tabular-nums"><NumberTicker value={n} startOnView suffix={suf} /></div><span className="text-sm text-muted-foreground">{d}</span></Card></Rise>
+            ))}
           </div>
-          <div className="section-head" style={{ marginTop: 110 }}>
-            <div className="eyebrow">How it works</div>
-            <h2>Seal it once. Check in now and then. They'll know what to do.</h2>
-            <p>Morrowseal is a quiet dead-man's switch. While you're around, nothing moves. If you go silent, the people you named get a calm email and one button.</p>
+          <div className="mx-auto mt-24 max-w-2xl text-center">
+            <div className={eyebrow}>How it works</div>
+            <h2 className={h2}>Seal it once. Check in now and then. They'll know what to do.</h2>
+            <p className="mt-4 text-pretty text-muted-foreground sm:text-lg">Morrowseal is a quiet dead-man's switch. While you're around, nothing moves. If you go silent, the people you named get a calm email and one button.</p>
           </div>
-          <div className="steps3">
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
             {[
-              { n: "01", t: "Seal", d: "Add letters, documents and passwords. They're encrypted in your browser and the key is sealed to the enclave.", icon: <Folder name="For Ama" count={3} hue="blue" peeks={[{ thumb: "linear-gradient(135deg,#cfe8ff,#0953ff)" }, { thumb: "#e2ecf5" }, { thumb: "linear-gradient(160deg,#1a1615,#453f3d)" }]} /> },
-              { n: "02", t: "Check in", d: "Pick a rhythm, weekly to yearly. One tap from any device resets the clock. Miss it and a grace period begins.", icon: <div className="pulse" style={{ width: 84, height: 84, borderRadius: 28, background: "var(--brand)", display: "grid", placeItems: "center", color: "#fff" }}><Heartbeat size={38} weight="bold" /></div> },
-              { n: "03", t: "Heirs claim", d: "Your heirs get a private link, sign in with their email, and the enclave hands the key to them alone.", icon: <Folder name="Opened" count={3} hue="green" open peeks={[{ thumb: "linear-gradient(135deg,#d6f5e4,#0ea158)" }, { thumb: "#e2ecf5" }, { thumb: "#fff" }]} /> },
+              { n: "01", t: "Seal", d: "Add letters, documents and passwords. They're encrypted in your browser and the key is sealed to the enclave.", art: <ProjectFolder title="For Ama" description="Sealed" previews={previews} className="w-full max-w-[15rem]" /> },
+              { n: "02", t: "Check in", d: "Pick a rhythm, weekly to yearly. One tap from any device resets the clock. Miss it and a grace period begins.", art: <div className="relative grid size-24 place-items-center"><span className="absolute inset-0 animate-ping rounded-full bg-primary/20 [animation-duration:2.4s]" /><span className="relative grid size-20 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30"><Heartbeat size={36} weight="bold" /></span></div> },
+              { n: "03", t: "Heirs claim", d: "Your heirs get a private link, sign in with their email, and the enclave hands the key to them alone.", art: <ProjectFolder title="Opened" description="Ready for Ama" previews={previews.slice(0, 3)} className="w-full max-w-[15rem]" /> },
             ].map((s, i) => (
-              <Rise key={s.n} delay={i * 90}><div className="card step3"><span className="num">{s.n}</span><h3>{s.t}</h3><p>{s.d}</p><div className="stage">{s.icon}</div></div></Rise>
+              <Rise key={s.n} delay={i * 90} className="h-full"><Card className="h-full gap-3 px-6">
+                <span className="font-mono text-xs text-muted-foreground">{s.n}</span><h3 className="text-xl font-semibold tracking-tight">{s.t}</h3><p className="text-pretty text-sm text-muted-foreground">{s.d}</p>
+                <div className="mt-auto flex min-h-44 items-center justify-center pt-4">{s.art}</div>
+              </Card></Rise>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section" id="privacy" style={{ background: "var(--bg-subtle)" }}>
-        <div className="wrap">
-          <div className="section-head">
-            <div className="eyebrow">Privacy you can check</div>
-            <h2>The chain keeps the promise. It never keeps the secret.</h2>
-            <p>Everything a judge, a stranger or we could read is on the Proof page. Here is what that adds up to.</p>
+      <section className="border-y border-border bg-card/50 py-20 sm:py-28" id="privacy">
+        <div className={wrap}>
+          <div className="mx-auto max-w-2xl text-center">
+            <div className={eyebrow}>Privacy you can check</div>
+            <h2 className={h2}>The chain keeps the promise. It never keeps the secret.</h2>
+            <p className="mt-4 text-pretty text-muted-foreground sm:text-lg">Everything a judge, a stranger or we could read is on the Proof page. Here is what that adds up to.</p>
           </div>
-          <div className="features">
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               [Hash, "Only hashes on NEAR", "The contract stores a SHA-256 commitment, an IPFS address of ciphertext, a heir count and your check-in times. That's all."],
               [Cpu, "The key never leaves the enclave", "Your vault key is sealed to an OutLayer worker running in Intel TDX. Its own key was generated inside the TEE; nobody has seen it."],
@@ -91,61 +121,69 @@ export default function Landing() {
               [Heartbeat, "Re-checked on chain", "Every release request makes the enclave re-read the vault from NEAR, so a forged request can't open a live vault."],
               [FolderLock, "Files on IPFS, sealed", "AES-256-GCM in your browser before upload. IPFS only ever holds ciphertext."],
             ].map(([I, t, d]: any, i) => (
-              <Rise key={t} delay={(i % 3) * 80}><div className="card feature"><span className="icon-chip"><I size={22} weight="duotone" /></span><h3>{t}</h3><p>{d}</p>{i === 0 && <Link to="/app/proof">Open the proof <ArrowRight size={14} /></Link>}</div></Rise>
+              <Rise key={t} delay={(i % 3) * 80} className="h-full"><Card className="h-full gap-3 px-6">
+                <span className="grid size-11 place-items-center rounded-full bg-primary/10 text-primary"><I size={22} weight="duotone" /></span>
+                <h3 className="text-lg font-semibold tracking-tight">{t}</h3><p className="text-pretty text-sm text-muted-foreground">{d}</p>
+                {i === 0 && <Link to="/app/proof" className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-primary">Open the proof <ArrowRight size={14} /></Link>}
+              </Card></Rise>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section" id="heirs">
-        <div className="wrap split">
+      <section className="py-20 sm:py-28" id="heirs">
+        <div className={`${wrap} grid items-center gap-12 lg:grid-cols-2`}>
           <Rise>
-            <div className="eyebrow">For the people you name</div>
-            <h2>A calm email. One button. Their files, and your words.</h2>
-            <p className="lead">No crypto jargon, no wallet to install. Heirs sign in with the email you used for them, and their browser decrypts everything on the spot.</p>
-            <ul className="ticks">
-              <li><CheckCircle size={20} weight="fill" /> A private link that only works for them</li>
-              <li><CheckCircle size={20} weight="fill" /> Owners and heirs sign in with email; the NEAR account is made for you</li>
-              <li><CheckCircle size={20} weight="fill" /> Files decrypt in their browser, never on a server</li>
+            <div className={eyebrow}>For the people you name</div>
+            <h2 className={h2}>A calm email. One button. Their files, and your words.</h2>
+            <p className="mt-4 text-pretty text-muted-foreground sm:text-lg">No crypto jargon, no wallet to install. Heirs sign in with the email you used for them, and their browser decrypts everything on the spot.</p>
+            <ul className="mt-6 grid gap-3 text-sm">
+              {["A private link that only works for them", "Owners and heirs sign in with email; the NEAR account is made for you", "Files decrypt in their browser, never on a server"].map((t) => <li key={t} className="flex items-start gap-2.5"><CheckCircle size={20} weight="fill" className="mt-px shrink-0 text-primary" />{t}</li>)}
             </ul>
           </Rise>
           <Rise delay={120}>
-            <div className="card mail-mock">
-              <div className="from"><span className="av" /><div><b>Vault Keeper</b><div className="muted">Kofi left something for you</div></div></div>
-              <h4>Hi Ama,</h4>
-              <p>Kofi set up a private vault and named you as someone to receive it. It is ready for you now.</p>
-              <div style={{ margin: "24px 0" }}><span className="btn btn-dark">Open what was left</span></div>
-              <p className="muted" style={{ fontSize: 14 }}>Take your time. The link is only for you, and nothing has been shared with anyone else.</p>
+            <Card className="gap-4 p-6 shadow-xl shadow-black/5 sm:p-8">
+              <div className="flex items-center gap-3"><Persona name="Vault Keeper" size={40} /><div><b className="text-sm">Vault Keeper</b><div className="text-sm text-muted-foreground">Kofi left something for you</div></div></div>
+              <h4 className="text-xl font-semibold tracking-tight">Hi Ama,</h4>
+              <p className="text-pretty text-sm text-muted-foreground">Kofi set up a private vault and named you as someone to receive it. It is ready for you now.</p>
+              <div className="my-2"><span className={btn("primary", "md")}>Open what was left</span></div>
+              <p className="text-sm text-muted-foreground">Take your time. The link is only for you, and nothing has been shared with anyone else.</p>
+            </Card>
+          </Rise>
+        </div>
+      </section>
+
+      <section className="pb-20 sm:pb-28" id="faq">
+        <div className={`${wrap} max-w-3xl`}>
+          <div className="mb-10 text-center"><div className={eyebrow}>Questions</div><h2 className={h2}>Before you seal anything</h2></div>
+          <BouncyAccordion items={FAQ.map(([q, a], i) => ({ id: String(i), title: q, description: a }))} defaultValue="0" />
+        </div>
+      </section>
+
+      <section className="pb-20 sm:pb-28">
+        <div className={wrap}>
+          <Rise>
+            <div className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-14 text-center text-primary-foreground sm:px-12 sm:py-20">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(255_255_255/0.25),transparent)]" aria-hidden />
+              <div className="relative">
+                <LockKey size={34} weight="duotone" className="mx-auto" />
+                <h2 className="mx-auto mt-4 max-w-2xl text-balance text-3xl font-semibold tracking-tight sm:text-5xl">Two minutes now. Peace of mind for later.</h2>
+                <p className="mx-auto mt-4 max-w-lg text-pretty text-primary-foreground/85 sm:text-lg">Create a vault on NEAR testnet, set a short check-in, and watch your heir receive it.</p>
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  <Link to="/app/create" className={btn("secondary", "lg", "border-transparent bg-white text-neutral-900 hover:bg-white/90")}>Create a vault</Link>
+                  <Link to="/app/proof" className={btn("outline", "lg", "border-white/40 text-white hover:bg-white/10")}><ShieldCheck size={18} /> See the proof</Link>
+                </div>
+              </div>
             </div>
           </Rise>
         </div>
       </section>
 
-      <section className="section" id="faq" style={{ paddingTop: 20 }}>
-        <div className="wrap">
-          <div className="section-head"><div className="eyebrow">Questions</div><h2>Before you seal anything</h2></div>
-          <div className="faq">
-            {FAQ.map(([q, a]) => (<details key={q}><summary>{q}<Plus size={18} /></summary><p>{a}</p></details>))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 30 }}>
-        <div className="wrap">
-          <Rise><div className="cta-band">
-            <LockKey size={34} weight="duotone" />
-            <h2 style={{ marginTop: 14 }}>Two minutes now. Peace of mind for later.</h2>
-            <p>Create a vault on NEAR testnet, set a short check-in, and watch your heir receive it.</p>
-            <div className="hero-ctas" style={{ marginTop: 0 }}><Link to="/app/create" className="btn btn-white btn-lg">Create a vault</Link><Link to="/app/proof" className="btn btn-glass btn-lg"><ShieldCheck size={18} /> See the proof</Link></div>
-          </div></Rise>
-        </div>
-      </section>
-
-      <footer className="footer">
-        <div className="wrap footer-in">
+      <footer className="border-t border-border py-8 text-sm text-muted-foreground">
+        <div className={`${wrap} flex flex-wrap items-center justify-between gap-4`}>
           <Logo />
-          <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
-            <a href={`${EXPLORER}/address/${VAULT_CONTRACT}`} target="_blank" rel="noreferrer">Contract {VAULT_CONTRACT}</a>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <a href={`${EXPLORER}/address/${VAULT_CONTRACT}`} target="_blank" rel="noreferrer" className="hover:text-foreground">Contract {VAULT_CONTRACT}</a>
             <span>Enclave {OUTLAYER_PROJECT}</span>
             <span>NEAR testnet</span>
           </div>

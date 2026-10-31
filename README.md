@@ -145,7 +145,7 @@ Built at NEAR HACKATHON 2026. Track:
 **Dependencies** (from `package.json`, `web/package.json`, `contracts/vault/Cargo.toml` and `enclave/Cargo.toml`):
 
 - Keeper / shared (Node 20+): `eciesjs`, `jose`, `near-api-js` (v5).
-- Web app: `react`, `react-dom`, `react-router-dom`, `vite`, `@vitejs/plugin-react`, `typescript`, `near-api-js` (v7), `eciesjs`, `@privy-io/react-auth`, `@solana/kit`, `@solana-program/system`, `@solana-program/token`, `@phosphor-icons/react`, `@dicebear/core`, `@dicebear/collection`, `@unlocalhosted/metalui`, `buffer`. Fonts Geist and OpenRunde (SIL OFL, files in `web/public/fonts`).
+- Web app: `react`, `react-dom`, `react-router-dom`, `vite`, `@vitejs/plugin-react`, `typescript`, `near-api-js` (v7), `eciesjs`, `@privy-io/react-auth`, `@solana/kit`, `@solana-program/system`, `@solana-program/token`, `@phosphor-icons/react`, `@dicebear/core`, `@dicebear/collection`, `tailwindcss`, `motion`, `next-themes`, `lucide-react` (beUI components, MIT, copied into `web/src/components/motion`), `buffer`. Fonts Geist and OpenRunde (SIL OFL, files in `web/public/fonts`).
 - NEAR contract (Rust): `near-sdk` 5.17, `serde_json`, `hex`.
 - Enclave (Rust, `wasm32-wasip2`): `serde`, `serde_json`, `sha2`, `hmac`, `hkdf`, `hex`, `base64`, `p256`, `ecies`, `libsecp256k1`, `wasi-http-client`.
 

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { EyeSlash, CircleNotch } from "@phosphor-icons/react";
+import { EyeSlash } from "@phosphor-icons/react";
+import { Button } from "@/components/motion/button/base";
+import { Spinner } from "./ui";
 import { localVaults } from "../lib/local";
 import { canOwnerOpen, friendly, ownerOpen } from "../lib/ownerOpen";
 
@@ -7,12 +9,12 @@ import { canOwnerOpen, friendly, ownerOpen } from "../lib/ownerOpen";
 export function RevealHeirs({ v }: { v: { id: number; status: string } }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  if (!canOwnerOpen(v)) return <span className="muted" style={{ fontSize: 13 }}>Heir names stay on the device that sealed this older vault.</span>;
+  if (!canOwnerOpen(v)) return <span className="text-xs text-muted-foreground">Heir names stay on the device that sealed this older vault.</span>;
   const go = async () => { setBusy(true); setErr(""); try { await ownerOpen(v); } catch (e) { setErr(friendly(e)); } finally { setBusy(false); } };
   return (
     <span>
-      <button className="btn btn-sm btn-ghost" disabled={busy} onClick={go}>{busy ? <CircleNotch size={14} className="spin" /> : <EyeSlash size={14} />} {busy ? "Asking the enclave…" : "Show heir details"}</button>
-      {err && <div style={{ color: "var(--danger)", fontSize: 13, marginTop: 6 }}>{err}</div>}
+      <Button variant="secondary" size="sm" disabled={busy} onClick={go}>{busy ? <Spinner /> : <EyeSlash size={14} />} {busy ? "Asking the enclave…" : "Show heir details"}</Button>
+      {err && <div className="mt-1.5 text-sm text-destructive">{err}</div>}
     </span>
   );
 }

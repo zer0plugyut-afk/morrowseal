@@ -38,7 +38,7 @@ function BridgeInner() {
 export function AuthRoot({ children }: { children: ReactNode }) {
   if (!PRIVY_APP_ID) return <>{children}</>;
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ["email", "google"], appearance: { theme: "light", accentColor: "#3a7bfa", showWalletLoginFirst: false, landingHeader: "Sign in to Morrowseal", loginMessage: "Continue with Google, or enter your email for a one-time code." }, embeddedWallets: { showWalletUIs: false, ethereum: { createOnLogin: "off" }, solana: { createOnLogin: "off" } } } as any}>
+    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ["email", "google"], appearance: { theme: "light", accentColor: "#0285f7", showWalletLoginFirst: false, landingHeader: "Sign in to Morrowseal", loginMessage: "Continue with Google, or enter your email for a one-time code." }, embeddedWallets: { showWalletUIs: false, ethereum: { createOnLogin: "off" }, solana: { createOnLogin: "off" } } } as any}>
       <BridgeInner />{children}
     </PrivyProvider>
   );

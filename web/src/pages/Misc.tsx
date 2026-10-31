@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple, LockKey, PencilSimple, Clock, Warning, Bell, EnvelopeSimple, LockKeyOpen, XCircle, Info, CircleNotch, ClockCounterClockwise, HandHeart } from "@phosphor-icons/react";
-import { Pagination, useToast } from "@unlocalhosted/metalui";
+import { motion } from "motion/react";
+import { Heartbeat, UsersThree, ArrowSquareOut, ShieldCheck, Cpu, Hash, EyeSlash, Moon, Sun, Trash, DownloadSimple, LockKey, PencilSimple, Clock, Warning, Bell, EnvelopeSimple, LockKeyOpen, XCircle, Info, ClockCounterClockwise, HandHeart, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { useToast } from "../components/toast";
+import { Button } from "@/components/motion/button/base";
+import { AnimatedBadge, type AnimatedBadgeStatus } from "@/components/motion/animated-badge";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 import { Persona } from "../components/Persona";
 import { RevealHeirs, useLocalVaults } from "../components/RevealHeirs";
 import { Top, NeedWallet } from "../app/Shell";
@@ -10,7 +15,7 @@ import { callVault, deadline, EXPLORER, nsToMs, view, type ChainEvent, type Vaul
 import { countdown, span, when, tzLabel, short } from "../lib/format";
 import { localVaults } from "../lib/local";
 import { identityToken } from "../lib/privy";
-import { useNow, useTheme } from "../components/ui";
+import { Banner, Card, Empty, IconChip, Kv, Mono, Row, Spinner, btn, useNow } from "../components/ui";
 import { label } from "./Vaults";
 import { VAULT_CONTRACT, OUTLAYER_PROJECT, ENCLAVE_PUBKEY } from "@shared/morrowseal.mjs";
 
@@ -22,15 +27,15 @@ export function Heirs() {
   return (
     <>
       <Top title="Heirs" sub="Names and emails live inside the sealed vault and on your devices, never on NEAR (it sees a count). On a new device, use Show heir details." />
-      <div className="card card-pad">
-        {rows.length === 0 ? <div className="empty"><UsersThree size={30} /><h3>No heirs yet</h3><p>Name heirs when you create a vault.</p><Link className="btn btn-dark" to="/app/create">Create a vault</Link></div> :
-          <div className="list">{rows.map(({ v, i, h }) => (
-            <div className="row" key={`${v.id}-${i}`}>
-              <span style={{ flexShrink: 0 }}><Persona email={h?.email} name={h?.name || `Heir ${i + 1}`} /></span>
-              <div className="grow"><div className="t" title={h?.name}>{h?.name || `Heir ${i + 1}`}</div><div className="s" title={h?.email}>{h?.email || "Sealed in the vault"} · {v.title}</div>{!h && i === 0 && !watch && <div style={{ marginTop: 6 }}><RevealHeirs v={v} /></div>}</div>
-              <span className={`chip ${v.claims[i] ? "chip-green" : v.status === "Released" ? "chip-amber" : "chip-blue"}`}>{v.claims[i] ? "Opened" : v.status === "Released" ? "Emailed" : "Sealed"}</span>
-            </div>))}</div>}
-      </div>
+      <Card className="px-5 sm:px-6">
+        {rows.length === 0 ? <Empty icon={<UsersThree size={22} weight="duotone" />} title="No heirs yet" action={<Link className={btn("primary", "md")} to="/app/create">Create a vault</Link>}>Name heirs when you create a vault.</Empty> :
+          <div>{rows.map(({ v, i, h }) => (
+            <Row key={`${v.id}-${i}`}>
+              <span className="shrink-0"><Persona email={h?.email} name={h?.name || `Heir ${i + 1}`} /></span>
+              <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium" title={h?.name}>{h?.name || `Heir ${i + 1}`}</div><div className="truncate text-xs text-muted-foreground" title={h?.email}>{h?.email || "Sealed in the vault"} · {v.title}</div>{!h && i === 0 && !watch && <div className="mt-1.5"><RevealHeirs v={v} /></div>}</div>
+              <AnimatedBadge size="sm" status={v.claims[i] ? "success" : v.status === "Released" ? "warning" : "info"}>{v.claims[i] ? "Opened" : v.status === "Released" ? "Emailed" : "Sealed"}</AnimatedBadge>
+            </Row>))}</div>}
+      </Card>
     </>
   );
 }
@@ -48,15 +53,18 @@ export function CheckIns() {
   return (
     <>
       <Top title="Check-ins" sub={`Times are in your timezone (${tzLabel()}).`} />
-      <div className="grid-2">
-        <div className="card card-pad">
-          <button className="big-check pulse" onClick={go} disabled={!active.length}><Heartbeat size={40} weight="bold" />I'm here<small>{active.length ? `Resets ${active.length} vault${active.length > 1 ? "s" : ""}` : "No active vaults"}</small></button>
-        </div>
-        <div className="card card-pad">
-          <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 21, letterSpacing: "-.03em", marginBottom: 6 }}>Deadlines</h3>
-          <div className="list">{active.length === 0 ? <p className="muted">Nothing is counting down.</p> : active.map((v) => (
-            <div className="row" key={v.id}><div className="grow"><div className="t">{v.title}</div><div className="s">Every {span(v.interval_s)} · last {when(nsToMs(v.last_checkin_ns))}</div></div><div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 600 }}>{deadline(v) > now ? countdown(deadline(v) - now) : "due"}</div><div className="s muted" style={{ fontSize: 12 }}>{when(deadline(v))}</div></div></div>))}</div>
-        </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="items-center justify-center px-6 py-10">
+          <motion.button whileTap={{ scale: 0.95 }} className="group relative grid size-48 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 outline-none transition-opacity focus-visible:ring-4 focus-visible:ring-primary/30 disabled:opacity-50 disabled:shadow-none" onClick={go} disabled={!active.length}>
+            {active.length > 0 && <span className="absolute inset-0 animate-ping rounded-full bg-primary/25 [animation-duration:2.6s]" />}
+            <span className="relative flex flex-col items-center gap-1 text-lg font-semibold"><Heartbeat size={40} weight="bold" />I'm here<small className="max-w-32 text-xs font-normal opacity-80">{active.length ? `Resets ${active.length} vault${active.length > 1 ? "s" : ""}` : "No active vaults"}</small></span>
+          </motion.button>
+        </Card>
+        <Card className="px-5 sm:px-6">
+          <h3 className="text-lg font-semibold tracking-tight">Deadlines</h3>
+          <div>{active.length === 0 ? <p className="text-sm text-muted-foreground">Nothing is counting down.</p> : active.map((v) => (
+            <Row key={v.id}><div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{v.title}</div><div className="text-xs text-muted-foreground">Every {span(v.interval_s)} · last {when(nsToMs(v.last_checkin_ns))}</div></div><div className="text-right"><Mono className="font-semibold">{deadline(v) > now ? countdown(deadline(v) - now) : "due"}</Mono><div className="text-xs text-muted-foreground">{when(deadline(v))}</div></div></Row>))}</div>
+        </Card>
       </div>
     </>
   );
@@ -81,6 +89,24 @@ const HEIR_EV: Record<string, [string, any, string]> = {
   heir_claimed: ["You opened a vault left for you", LockKeyOpen, "green"],
   vault_cancelled: ["A vault shared with you was closed", XCircle, "muted"],
 };
+const TONE: Record<string, string> = { brand: "bg-primary/10 text-primary", green: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400", muted: "bg-muted text-muted-foreground" };
+
+function Pager({ page, count, onPage }: { page: number; count: number; onPage: (p: number) => void }) {
+  const nums = Array.from({ length: count }, (_, i) => i + 1).filter((n) => n === 1 || n === count || Math.abs(n - page) <= 1);
+  return (
+    <nav aria-label="Activity pages" className="mt-5 flex items-center justify-center gap-1 border-t border-border pt-5">
+      <Button variant="ghost" size="icon" aria-label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)}><CaretLeft size={16} /></Button>
+      {nums.map((n, k) => (
+        <span key={n} className="flex items-center gap-1">
+          {k > 0 && n - nums[k - 1] > 1 && <span className="px-1 text-muted-foreground">…</span>}
+          <button onClick={() => onPage(n)} aria-current={n === page ? "page" : undefined} className={cn("grid size-9 place-items-center rounded-full text-sm font-medium tabular-nums transition-colors", n === page ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>{n}</button>
+        </span>
+      ))}
+      <Button variant="ghost" size="icon" aria-label="Next page" disabled={page >= count} onClick={() => onPage(page + 1)}><CaretRight size={16} /></Button>
+    </nav>
+  );
+}
+
 export function Activity() {
   const [events, setEvents] = useState<Ev[] | null>(null);
   const [page, setPage] = useState(1);
@@ -105,23 +131,23 @@ export function Activity() {
   return (
     <>
       <Top title="Activity" sub={`Only your own vaults and the vaults left for you. Times in ${tzLabel()}.`} />
-      <div className="card card-pad">
-        {events === null ? <p className="muted"><CircleNotch size={14} className="spin" /> Loading…</p>
+      <Card className="px-5 sm:px-6">
+        {events === null ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Loading…</p>
         : list.length === 0 ? (
-          <div className="empty-state"><span className="icon-chip"><ClockCounterClockwise size={22} weight="duotone" /></span><h3>Nothing here yet</h3><p className="muted">Create a vault, check in, or open something left for you, and it shows up here with the time in your timezone and a link to the NEAR record.</p><div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12 }}><Link className="btn btn-dark btn-sm" to="/app/create">Create a vault</Link><Link className="btn btn-ghost btn-sm" to="/app/shared">Shared with me</Link></div></div>
-        ) : <div className="list">{list.slice((page - 1) * PAGE, page * PAGE).map((e, i) => {
+          <Empty icon={<ClockCounterClockwise size={22} weight="duotone" />} title="Nothing here yet" action={<div className="mt-2 flex gap-2"><Link className={btn("primary", "sm")} to="/app/create">Create a vault</Link><Link className={btn("secondary", "sm")} to="/app/shared">Shared with me</Link></div>}>Create a vault, check in, or open something left for you, and it shows up here with the time in your timezone and a link to the NEAR record.</Empty>
+        ) : <div>{list.slice((page - 1) * PAGE, page * PAGE).map((e, i) => {
           const [l, I, tone] = (e.role === "heir" ? HEIR_EV[e.kind] : EV[e.kind]) || EV[e.kind] || [e.kind, Info, "muted"];
           const by = e.role === "heir" ? "" : e.actor === account ? " · by you" : e.actor === "keeper" || e.actor.endsWith(".testnet") ? " · by the keeper" : "";
-          return (<div className="row ev-row" key={i}><span className={`ev-ic tone-${tone}`}><I size={18} weight="duotone" /></span><div className="grow"><div className="t">{l} <span className="muted" style={{ fontWeight: 400 }}>· {titleOf(e)}</span></div><div className="s">{when(nsToMs(e.at_ns))}{e.detail && e.role !== "heir" ? ` · ${e.detail}` : ""}{by}</div></div></div>);
+          return (<Row key={i}><span className={cn("grid size-9 shrink-0 place-items-center rounded-full", TONE[tone])}><I size={18} weight="duotone" /></span><div className="min-w-0 flex-1"><div className="text-sm font-medium">{l} <span className="font-normal text-muted-foreground">· {titleOf(e)}</span></div><div className="text-xs text-muted-foreground">{when(nsToMs(e.at_ns))}{e.detail && e.role !== "heir" ? ` · ${e.detail}` : ""}{by}</div></div></Row>);
         })}</div>}
-        {pages > 1 && <div className="pager"><Pagination page={page} count={pages} onPageChange={setPage} aria-label="Activity pages" /></div>}
-      </div>
+        {pages > 1 && <Pager page={page} count={pages} onPage={setPage} />}
+      </Card>
     </>
   );
 }
 
 type Shared = { vault_id: number; heir_index: number; heir_name: string; owner_name: string; owner: string; status: "waiting" | "released" | "opened" | "cancelled"; created_ns: string; released_ns: string | null; claimed_ns: string | null; link: string | null };
-const ST: Record<Shared["status"], [string, string]> = { waiting: ["Waiting", "chip-blue"], released: ["Released", "chip-amber"], opened: ["Opened", "chip-green"], cancelled: ["Closed", "chip-muted"] };
+const ST: Record<Shared["status"], [string, AnimatedBadgeStatus]> = { waiting: ["Waiting", "info"], released: ["Released", "warning"], opened: ["Opened", "success"], cancelled: ["Closed", "neutral"] };
 export function SharedWithMe() {
   const { account, email, watch } = useApp();
   const [rows, setRows] = useState<Shared[] | null>(null);
@@ -145,22 +171,22 @@ export function SharedWithMe() {
   return (
     <>
       <Top title="Shared with me" sub={`Vaults that name ${email || "your email"} as an heir. Times in ${tzLabel()}.`} />
-      <div className="card card-pad">
-        {err && !rows ? <div className="banner warn"><Info size={20} /> {err}</div>
-        : rows === null ? <p className="muted"><CircleNotch size={14} className="spin" /> Loading…</p>
-        : rows.length === 0 ? <div className="empty-state"><span className="icon-chip"><HandHeart size={22} weight="duotone" /></span><h3>Nothing shared with you yet</h3><p className="muted">When someone names your email as an heir in their vault, it appears here. Nothing inside is visible until it is released to you.</p></div>
-        : <div className="list">{rows.map((r) => {
+      <Card className="px-5 sm:px-6">
+        {err && !rows ? <Banner tone="warn">{err}</Banner>
+        : rows === null ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Loading…</p>
+        : rows.length === 0 ? <Empty icon={<HandHeart size={22} weight="duotone" />} title="Nothing shared with you yet">When someone names your email as an heir in their vault, it appears here. Nothing inside is visible until it is released to you.</Empty>
+        : <div>{rows.map((r) => {
           const [l, c] = ST[r.status];
           const sub = r.status === "opened" ? `Opened ${when(nsToMs(r.claimed_ns!))}` : r.status === "released" ? `Released ${when(nsToMs(r.released_ns!))}` : r.status === "waiting" ? `Sealed ${when(nsToMs(r.created_ns))} · stays sealed while they check in` : "Closed by its owner";
-          return (<div className="row" key={`${r.vault_id}-${r.heir_index}`}>
+          return (<Row key={`${r.vault_id}-${r.heir_index}`}>
             <Persona name={r.owner_name || r.owner} email={r.owner} />
-            <div className="grow"><div className="t">{r.owner_name ? `From ${r.owner_name}` : `Vault ${r.vault_id}`}</div><div className="s">{sub}</div></div>
-            <span className={`chip ${c}`}>{l}</span>
-            {(r.status === "released" || r.status === "opened") && r.link ? <a className="btn btn-dark btn-sm" href={r.status === "opened" ? `/claim/${r.vault_id}/${r.heir_index}#reopen=1` : r.link}><LockKeyOpen size={16} /> {r.status === "opened" ? "Reopen" : "Open"}</a>
-              : r.status === "waiting" ? <a className="btn btn-ghost btn-sm" href={`/waiting/${r.vault_id}`}>Details</a> : null}
-          </div>);
+            <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{r.owner_name ? `From ${r.owner_name}` : `Vault ${r.vault_id}`}</div><div className="text-xs text-muted-foreground">{sub}</div></div>
+            <AnimatedBadge size="sm" status={c}>{l}</AnimatedBadge>
+            {(r.status === "released" || r.status === "opened") && r.link ? <a className={btn("primary", "sm")} href={r.status === "opened" ? `/claim/${r.vault_id}/${r.heir_index}#reopen=1` : r.link}><LockKeyOpen size={16} /> {r.status === "opened" ? "Reopen" : "Open"}</a>
+              : r.status === "waiting" ? <a className={btn("secondary", "sm")} href={`/waiting/${r.vault_id}`}>Details</a> : null}
+          </Row>);
         })}</div>}
-      </div>
+      </Card>
     </>
   );
 }
@@ -174,58 +200,58 @@ export function Proof() {
   return (
     <>
       <Top title="Proof" sub="What anyone can read, next to what only the enclave can." />
-      <div className="compare">
-        <div className="card card-pad">
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}><span className="icon-chip"><Hash size={20} weight="duotone" /></span><div><b>On NEAR (public)</b><div className="muted" style={{ fontSize: 14 }}>Raw <span className="mono">get_vault</span> for vault #{shown?.id ?? "—"}</div></div></div>
-          <pre className="code">{trimmed ? JSON.stringify(trimmed, null, 2) : "No vaults yet."}</pre>
-          <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>No names, emails, titles, messages or file names. <span className="mono">notice_ct</span> and <span className="mono">key_ct</span> are ciphertext sealed to the mail keeper and to the heir's one-time browser key.</p>
-        </div>
-        <div className="card card-pad">
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}><span className="icon-chip"><EyeSlash size={20} weight="duotone" /></span><div><b>Inside the enclave only</b><div className="muted" style={{ fontSize: 14 }}>Decrypted in an Intel TDX worker</div></div></div>
-          <pre className="code">{`{
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 gap-4 px-5 sm:px-6">
+          <div className="flex items-center gap-3"><IconChip><Hash size={20} weight="duotone" /></IconChip><div><b className="text-sm">On NEAR (public)</b><div className="text-sm text-muted-foreground">Raw <Mono>get_vault</Mono> for vault #{shown?.id ?? "—"}</div></div></div>
+          <pre className="max-h-96 overflow-auto rounded-2xl bg-muted/60 p-4 font-mono text-xs leading-relaxed">{trimmed ? JSON.stringify(trimmed, null, 2) : "No vaults yet."}</pre>
+          <p className="text-sm text-muted-foreground">No names, emails, titles, messages or file names. <Mono>notice_ct</Mono> and <Mono>key_ct</Mono> are ciphertext sealed to the mail keeper and to the heir's one-time browser key.</p>
+        </Card>
+        <Card className="min-w-0 gap-4 px-5 sm:px-6">
+          <div className="flex items-center gap-3"><IconChip><EyeSlash size={20} weight="duotone" /></IconChip><div><b className="text-sm">Inside the enclave only</b><div className="text-sm text-muted-foreground">Decrypted in an Intel TDX worker</div></div></div>
+          <pre className="overflow-auto rounded-2xl bg-muted/60 p-4 font-mono text-xs leading-relaxed">{`{
   "owner_name": "…",
   "message": "…",
   "file_key": "32 random bytes",
   "files": [{ "cid": "…", "name": "…" }],
   "heirs": [{ "name": "…", "email": "…" }]
 }`}</pre>
-          <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>Sealed in your browser to the enclave key below with ECIES (secp256k1 + AES-256-GCM).</p>
-        </div>
+          <p className="text-sm text-muted-foreground">Sealed in your browser to the enclave key below with ECIES (secp256k1 + AES-256-GCM).</p>
+        </Card>
       </div>
-      <div className="card card-pad" style={{ marginTop: 20 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 18 }}><span className="icon-chip"><Cpu size={20} weight="duotone" /></span><b>Deployment</b></div>
-        <dl className="kv">
-          <dt>Vault contract</dt><dd><a className="link mono" href={`${EXPLORER}/address/${VAULT_CONTRACT}`} target="_blank" rel="noreferrer">{VAULT_CONTRACT} <ArrowSquareOut size={12} /></a></dd>
-          <dt>OutLayer project</dt><dd className="mono">{OUTLAYER_PROJECT}</dd>
-          <dt>Enclave public key</dt><dd className="mono">{ENCLAVE_PUBKEY}</dd>
-          <dt>Key origin</dt><dd>HKDF of <span className="mono">PROTECTED_MORROWSEAL_MASTER</span>, generated inside the OutLayer keystore TEE</dd>
-          <dt>Release rule</dt><dd>Enclave re-reads <span className="mono">get_vault</span> from NEAR RPC and refuses unless status is Released and the ciphertext hash matches</dd>
-          <dt>Vaults / events</dt><dd>{cfg ? `${cfg.vaults} / ${cfg.events}` : "…"}</dd>
-        </dl>
-        <div className="banner" style={{ marginTop: 18 }}><ShieldCheck size={20} /> Each claim and notice is a NEAR transaction that calls <span className="mono">outlayer.testnet.request_execution</span> and resumes with the TEE result. Open any <span className="mono">heir_claimed</span> event on Activity to follow it on NearBlocks.</div>
-      </div>
+      <Card className="mt-4 gap-5 px-5 sm:px-6">
+        <div className="flex items-center gap-3"><IconChip><Cpu size={20} weight="duotone" /></IconChip><b>Deployment</b></div>
+        <Kv rows={[
+          ["Vault contract", <a key="a" className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline" href={`${EXPLORER}/address/${VAULT_CONTRACT}`} target="_blank" rel="noreferrer"><Mono>{VAULT_CONTRACT}</Mono> <ArrowSquareOut size={12} /></a>],
+          ["OutLayer project", <Mono key="b">{OUTLAYER_PROJECT}</Mono>],
+          ["Enclave public key", <Mono key="c" className="break-all">{ENCLAVE_PUBKEY}</Mono>],
+          ["Key origin", <span key="d">HKDF of <Mono>PROTECTED_MORROWSEAL_MASTER</Mono>, generated inside the OutLayer keystore TEE</span>],
+          ["Release rule", <span key="e">Enclave re-reads <Mono>get_vault</Mono> from NEAR RPC and refuses unless status is Released and the ciphertext hash matches</span>],
+          ["Vaults / events", cfg ? `${cfg.vaults} / ${cfg.events}` : "…"],
+        ]} />
+        <Banner>Each claim and notice is a NEAR transaction that calls <Mono>outlayer.testnet.request_execution</Mono> and resumes with the TEE result. Open any <Mono>heir_claimed</Mono> event on Activity to follow it on NearBlocks.</Banner>
+      </Card>
     </>
   );
 }
 
 export function Settings() {
   const { account, logout } = useApp();
-  const [theme, toggle] = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
   const toast = useToast();
   const exportLocal = () => { const b = new Blob([JSON.stringify(localVaults(), null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "morrowseal-device-notes.json"; a.click(); };
+  const item = (t: string, d: React.ReactNode, right?: React.ReactNode) => <Row><div className="min-w-0 flex-1"><div className="text-sm font-medium">{t}</div><div className="break-words text-sm text-muted-foreground">{d}</div></div>{right}</Row>;
   return (
-    <div className="page-form">
+    <div className="max-w-2xl">
       <Top title="Settings" />
-      <div className="card card-pad">
-        <div className="list">
-          <div className="row"><div className="grow"><div className="t">Appearance</div><div className="s">Light follows Trezu's palette; dark keeps the same warm ink.</div></div><button className="btn btn-ghost btn-sm" onClick={toggle}>{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} {theme === "dark" ? "Light" : "Dark"}</button></div>
-          <div className="row"><div className="grow"><div className="t">Timezone</div><div className="s">All times show in {Intl.DateTimeFormat().resolvedOptions().timeZone} ({tzLabel()}).</div></div></div>
-          <div className="row"><div className="grow"><div className="t">Network</div><div className="s">NEAR testnet · {VAULT_CONTRACT}</div></div><span className="chip chip-amber">Testnet</span></div>
-          <div className="row"><div className="grow"><div className="t">Device notes</div><div className="s">Titles and heir names you typed are kept only in this browser.</div></div><button className="btn btn-ghost btn-sm" onClick={exportLocal}><DownloadSimple size={16} /> Export</button></div>
-          <div className="row"><div className="grow"><div className="t">Clear device notes</div><div className="s">Vaults stay on chain; this only forgets local titles.</div></div><button className="btn btn-ghost btn-sm" onClick={() => { localStorage.removeItem("ms-vaults"); toast.show({ title: "Device notes cleared", tone: "success" }); }}><Trash size={16} /> Clear</button></div>
-          {account && <div className="row"><div className="grow"><div className="t">Signed in</div><div className="s mono">{account}</div></div><button className="btn btn-ghost btn-sm" onClick={logout}>Sign out</button></div>}
-        </div>
-      </div>
+      <Card className="px-5 sm:px-6">
+        {item("Appearance", "Light and dark both use the beUI palette.", <Button variant="outline" size="sm" onClick={() => setTheme(dark ? "light" : "dark")}>{dark ? <Sun size={16} /> : <Moon size={16} />} {dark ? "Light" : "Dark"}</Button>)}
+        {item("Timezone", `All times show in ${Intl.DateTimeFormat().resolvedOptions().timeZone} (${tzLabel()}).`)}
+        {item("Network", `NEAR testnet · ${VAULT_CONTRACT}`, <AnimatedBadge status="warning" size="sm">Testnet</AnimatedBadge>)}
+        {item("Device notes", "Titles and heir names you typed are kept only in this browser.", <Button variant="outline" size="sm" onClick={exportLocal}><DownloadSimple size={16} /> Export</Button>)}
+        {item("Clear device notes", "Vaults stay on chain; this only forgets local titles.", <Button variant="outline" size="sm" onClick={() => { localStorage.removeItem("ms-vaults"); toast.show({ title: "Device notes cleared", tone: "success" }); }}><Trash size={16} /> Clear</Button>)}
+        {account && item("Signed in", <Mono className="break-all">{account}</Mono>, <Button variant="outline" size="sm" onClick={logout}>Sign out</Button>)}
+      </Card>
     </div>
   );
 }
